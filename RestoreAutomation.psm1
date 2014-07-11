@@ -70,9 +70,6 @@ Mike Fal (http://www.mikefal.net)
 .PARAMETER NoRecovery
     Switch parameter.  If true, script will not fully recover database.
 
-.RELATEDLINKS
-    http://www.mikefal.net
-    https://github.com/MikeFal/PowerShell
 #>
 
     param([parameter(Mandatory=$true)][string] $dir
@@ -187,9 +184,6 @@ Mike Fal (http://www.mikefal.net)
 .PARAMETER database
     Database that has users that needs to be synchronized.
 
-.RELATEDLINKS
-    http://www.mikefal.net
-    https://github.com/MikeFal/PowerShell
 #>
 	param([parameter(Mandatory=$true)][string] $server
 	,[parameter(Mandatory=$true)][string] $database)
@@ -240,10 +234,6 @@ Mike Fal (http://www.mikefal.net)
     Database that has users that needs to be checked.
 .PARAMETER Full
     Switch parameter.  If true, a full DBCC check is done against the target database.
-
-.RELATEDLINKS
-    http://www.mikefal.net
-    https://github.com/MikeFal/PowerShell
 #>
 	param([parameter(Mandatory=$true)][string] $server
 	,[parameter(Mandatory=$true)][string] $database

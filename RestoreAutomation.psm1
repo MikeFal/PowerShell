@@ -2,6 +2,12 @@
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended") | Out-Null
 
+#Restore Automation Module
+#Mike Fal (http://www.mikefal.net)
+#Provided under the Creative Commons Attribution Non-Commercial License (http://creativecommons.org/licenses/by-nc/3.0/)
+#This module is provided as is, with no guarantees expressed or implied.  Please use the script with
+#the appropriate level of caution. 
+
 function Get-RestoreObject{
 <#
 .SYNOPSIS
@@ -101,11 +107,11 @@ Mike Fal (http://www.mikefal.net)
     $files = $restore.ReadFileList($smosrv)
     foreach($file in $files){
 	    $pfile = $file.PhysicalName
-	    if($newdata -ne $null -and $file.Type -eq "D"){
+	    if($newdata.Length -gt 0 -and $file.Type -eq "D"){
 		    $pfile=$newdata + $pfile.Substring($pfile.LastIndexOf("\"))
 	    }
 	
-	    if($newlog -ne $null -and $file.Type -eq "L"){
+	    if($newdata.Length -gt 0 -and $file.Type -eq "L"){
 		    $pfile=$newlog + $pfile.Substring($pfile.LastIndexOf("\"))
 	    }
 	
@@ -194,7 +200,7 @@ Mike Fal (http://www.mikefal.net)
 	"from sys.database_principals d " + `
 	"join sys.server_principals s on d.name = s.name " + `
 	"left join sys.server_principals s2 on d.sid = s2.sid " + `
-	"where d.principal_id > 4 and d.type in (`'S`',`'U`',`'G`') and s2.sid is null"
+	"where d.principal_id > 4 and d.type in ('S','U','G') and s2.sid is null"
 
 	$orphans = $smosrv.Databases[$database].ExecuteWithResults($sql).Tables[0]
 
@@ -205,7 +211,7 @@ Mike Fal (http://www.mikefal.net)
 	$sql = "select d.name " + `
 	"from sys.database_principals d " + `
 	"left join sys.server_principals s2 on d.sid = s2.sid " + `
-	"where d.principal_id > 4 and d.type in (`'S`',`'U`',`'G`') and s2.sid is null"
+	"where d.principal_id > 4 and d.type in ('S','U','G') and s2.sid is null"
 	
 	$orphans = $smosrv.Databases[$database].ExecuteWithResults($sql).Tables[0]
 	

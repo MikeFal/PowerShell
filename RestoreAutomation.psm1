@@ -103,7 +103,7 @@ Mike Fal (http://www.mikefal.net)
 	    $restore.Database=$database
     }
 
-    $LSNCheck = $hfull.FirstLSN
+    $LSNCheck = $hfull.CheckpointLSN
     $files = $restore.ReadFileList($smosrv)
     foreach($file in $files){
 	    $pfile = $file.PhysicalName
@@ -131,7 +131,7 @@ Mike Fal (http://www.mikefal.net)
 	    $restore = Get-RestoreObject $database $diff
 	    $hdiff = Get-Header $restore $smosrv
 
-	    if($hdiff.DifferentialBaseLSN -eq $LSNCheck){
+	    if($hdiff.DatabaseBackupLSN -eq $LSNCheck){
 		    $sqlout += "--DIFF RESTORE"
 		    $sqlout += $restore.Script($smosrv)
 		    $LSNCheck = $hdiff.LastLSN

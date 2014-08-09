@@ -90,7 +90,7 @@ Mike Fal (http://www.mikefal.net)
 #>
 
     param([parameter(Mandatory=$true)][string] $dir
-    ,[parameter(Mandatory=$true)][string] $server
+    ,[string] $server = "localhost"
     ,[string] $database
     ,[string] $outputdir = ([Environment]::GetFolderPath("MyDocuments"))
     ,[string] $newdata

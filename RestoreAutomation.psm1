@@ -16,13 +16,24 @@ Internal function used by New-Restore.
 Internal funciton, returns SMO restore object for processing.
 #>
  Param($db,
-	$backupfile) 
+	$backupfile
+    ,$StopAt) 
 
 $rs = new-object("Microsoft.SqlServer.Management.Smo.Restore")
 $rs.Devices.AddDevice($backupfile.FullName, "File")
 $rs.Database=$db
 $rs.NoRecovery=$true
 $rs.Action="Database"
+
+if($StopAt){
+    $result=0
+    if([datetime]::TryParse($StopAt,[ref]$result)){
+        $rs.ToPointInTime = $StopAt
+    }
+    else{
+        $rs.StopAtMarkName = $StopAt
+    }
+}
 
 return $rs
 }#Get-RestoreObject
@@ -84,6 +95,7 @@ Mike Fal (http://www.mikefal.net)
     ,[string] $outputdir = ([Environment]::GetFolderPath("MyDocuments"))
     ,[string] $newdata
     ,[string] $newlog
+    ,[string] $StopAt
     ,[Switch] $Execute
     ,[Switch] $NoRecovery)
 
@@ -146,7 +158,7 @@ Mike Fal (http://www.mikefal.net)
 	    $sqlout += "--TRN LOG RESTORE"
 
 	    foreach ($trn in $trns){
-		    $restore = Get-RestoreObject $database $trn
+		    $restore = Get-RestoreObject $database $trn $StopAt
 		    $htrn = Get-Header $restore $smosrv
 		    if($htrn.FirstLSN -le $LSNCheck -and $htrn.LastLSN -ge $LSNCheck){
 			    $sqlout += $restore.Script($smosrv)

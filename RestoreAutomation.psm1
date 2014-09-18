@@ -1,6 +1,7 @@
 #load assemblies
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended") | Out-Null
+$ErrorActionPreference = "Inquire"
 
 #Restore Automation Module
 #Mike Fal (http://www.mikefal.net)
@@ -86,6 +87,10 @@ Mike Fal (http://www.mikefal.net)
     Switch parameter.  If true, restore will be executed after script is generated.
 .PARAMETER NoRecovery
     Switch parameter.  If true, script will not fully recover database.
+.PARAMETER Recurse
+    Switch parameter.  If true, script will recurse through all subdirectories for all files of the appropriate extension.
+    NOTE:  Currently the file gather will not filter on the restoring database.  Make sure all backup files within the
+    subdirectories belong to only one database.
 
 #>
 
@@ -97,14 +102,22 @@ Mike Fal (http://www.mikefal.net)
     ,[string] $newlog
     ,[string] $StopAt
     ,[Switch] $Execute
-    ,[Switch] $NoRecovery)
+    ,[Switch] $NoRecovery
+    ,[Switch] $Recurse)
 
     $sqlout = @()
     $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $server
 
-    $full = gci $dir | where {$_.name -like "*.bak"} | Sort-Object LastWriteTime -desc | Select-Object -first 1
-    $diff = gci $dir | where {$_.name -like "*.dff"} | sort-object LastWriteTime -desc | select-object -first 1
-    $trns = gci $dir | where {$_.name -like "*.trn"} | sort-object LastWriteTime
+	if($recurse){
+		$full = gci $dir -recurse | where {$_.name -like "*.bak"} | Sort-Object LastWriteTime -desc | Select-Object -first 1
+		$diff = gci $dir -recurse | where {$_.name -like "*.dff"} | sort-object LastWriteTime -desc | select-object -first 1
+		$trns = gci $dir -recurse | where {$_.name -like "*.trn"} | sort-object LastWriteTime
+	}
+	else{
+		$full = gci $dir | where {$_.name -like "*.bak"} | Sort-Object LastWriteTime -desc | Select-Object -first 1
+		$diff = gci $dir | where {$_.name -like "*.dff"} | sort-object LastWriteTime -desc | select-object -first 1
+		$trns = gci $dir | where {$_.name -like "*.trn"} | sort-object LastWriteTime
+	}
 
     #initialize and process full backup
     $restore = Get-RestoreObject $database $full
@@ -195,7 +208,7 @@ as the output.
 Mike Fal (http://www.mikefal.net)
 
 .EXAMPLE
-    Sync-DBUsers -server "localhosts" -database "tpcc"
+    Sync-DBUsers -server "localhost" -database "tpcc"
 
 .PARAMETER server
     Server where the database resides that is being synchronized.
@@ -244,7 +257,7 @@ full DBCC check.
 Mike Fal (http://www.mikefal.net)
 
 .EXAMPLE
-    Sync-DBUsers -server "localhosts" -database "tpcc"
+    Sync-DBUsers -server "localhost" -database "tpcc"
 
 .PARAMETER server
     Server where the database resides that is being checked.
@@ -266,3 +279,71 @@ Mike Fal (http://www.mikefal.net)
 	
 	Write-Output $results
 }#Get-DBCCCheckDB
+
+function Copy-Logins{
+<#
+.SYNOPSIS
+   Copies logins from source server to target server.
+
+.DESCRIPTION
+   Scripts logins out from a source server using the SMO and 
+   copies them to the target.  It uses the .Script() method 
+   and also applies all the roles.
+
+.PARAMETER source
+   REQUIRED.  Source server that logins are gathered from.
+
+.PARAMETER target
+   REQUIRED.  Target server that logins are created on.
+
+.EXAMPLE
+   Copy-Logins -target remoteserver -target localhost
+#>
+[cmdletbinding()]
+    param([parameter(Mandatory=$true)][string] $source
+        ,[parameter(Mandatory=$true)][string] $target
+        )
+    #create SMO objects
+    $smosource = new-object ('Microsoft.SqlServer.Management.Smo.Server') $source
+    $smotarget = new-object ('Microsoft.SqlServer.Management.Smo.Server') $target 	
+    
+    #set scripting objects
+    $so = new-object microsoft.sqlserver.management.smo.scriptingoptions
+    $so.LoginSid = $true
+
+    #get logins and loop
+    $logins = $smosource.logins
+	foreach($login in $logins){
+        $lscript = $login.Script($so) | Where {$_ -notlike "ALTER LOGIN*DISABLE"}
+        $lscript = $lscript -join " "
+
+        #If SQL Login sort password from pash, replace random password
+        if($login.LoginType -eq "SqlLogin"){
+            
+            $sql = "SELECT convert(varbinary(256),password_hash) as hashedpass FROM sys.sql_logins where name='"+$login.name+"'"
+            $hashedpass = ($smosource.databases['tempdb'].ExecuteWithResults($sql)).Tables.hashedpass
+            $passtring = Convert-SQLHashToString $hashedpass
+            $rndpw = $lscript.Substring($lscript.IndexOf("PASSWORD"),$lscript.IndexOf(", SID")-$lscript.IndexOf("PASSWORD"))
+
+            $lscript = $lscript.Replace($rndpw,"PASSWORD = $passtring hashed")
+        }
+
+        if(!($smotarget.logins.name.contains($login.name))){
+            $smotarget.Databases["tempdb"].ExecuteNonQuery($lscript)
+            $outmsg="Login " + $login.name + " created."
+        }
+        else{            
+            $outmsg="Login " + $login.name + " skipped."
+        }
+        Write-Verbose $outmsg
+	}
+}#Copy-Logins
+
+function Convert-SQLHashToString{
+    param([parameter(Mandatory=$true)] $binhash)
+
+    $outstring = "0x"
+    $binhash | ForEach-Object {$outstring += ("{0:X}" -f $_).PadLeft(2, "0")}
+
+    return $outstring
+}#Convert-SQLHashToString

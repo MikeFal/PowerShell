@@ -31,7 +31,7 @@
         }
         
         cSQLInstall SQLInstall{
-            InstanceName = 'MSSQLSERVER'
+            InstanceName = 'DUMMY'
             InstallPath = '\\HIKARU\InstallFiles\SQL2014'
             ConfigPath = '\\HIKARU\InstallFiles\SQL2014\SQL2014_Core_DSC.ini'
             UpdateEnabled = $true

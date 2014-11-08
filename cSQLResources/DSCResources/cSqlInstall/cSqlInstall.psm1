@@ -115,6 +115,7 @@ function Set-TargetResource
         Write-Verbose "Attempting install with: `n $installcmd"
         Invoke-Expression $installcmd
 
+        $log =  Get-ChildItem 'C:\Program Files\Microsoft SQL Server' -Recurse | Where-Object {$_.FullName -like '*Setup Bootstrap*' -and $_.Name -eq 'Summary.txt'}
         $InstallCheck = ($log |Get-Content |Select-Object -Skip 1 -First 1).Contains('Passed')
 
         if(!($InstallCheck)){

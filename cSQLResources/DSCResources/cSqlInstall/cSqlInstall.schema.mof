@@ -1,0 +1,12 @@
+﻿
+[ClassVersion("1.0.0.0"), FriendlyName("cSQLInstall")]
+class cSQLInstall : OMI_BaseResource
+{
+	[Key] String InstanceName;
+	[Required] String InstallPath;
+	[Required] String ConfigPath;
+	[Write] Boolean UpdateEnabled;
+	[Write] String UpdatePath;
+    [Write] Boolean MixedMode;
+};
+

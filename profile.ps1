@@ -2,12 +2,13 @@
 <#
 .SYNOPSIS
 Uses WMI to get capacity and freespace for all disks/mounts on a host.
+
 .DESCRIPTION
 Uses WMI Win32_Volume to query logical disks and provide drive size and usage for all
 logical disks and mountpoints.  If no parameter is given, localhost is used.  Otherwise
 the host name should be passed.
 
-Mike Fal (htp://www.mikefal.net) 2012-10-10
+Mike Fal (http://www.mikefal.net) 2012-10-10
 
 .PARAMETER
 String

@@ -92,43 +92,45 @@ param([string]$InstanceName,
     }
 }
 
-Configure-TempDB{
+function Configure-TempDB{
     param([string]$InstanceName,
         [int]$CpuCount = 8,
         [int]$DataFileSizeMB = 32768)
 
     $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
+    if($cpuCount -gt 8){$CpuCount = 8}
 
-    $DataFileSizeSingle = [Math]::Floor($DataFileSizeMB/$CpuCount/1024.0)
+    $DataFileSizeSingle = [Math]::Floor(($DataFileSizeMB/$CpuCount) * 1024.0)
     $FilePath = $srv.Databases['TempDB'].FileGroups['Primary'].Files[0].FileName
-    $FilePath = $FilePath.Substring(0,$FilePath.LastIndexOf('\')-1)
+    $FilePath = $FilePath.Substring(0,$FilePath.LastIndexOf('\'))
     $FileProc = 0
     while($FileProc -lt $CpuCount){
-        $file = $srv.Databases['TempDB'].FileGroups['Primary'].Files[$FileProc]
+        $file=$srv.Databases['TempDB'].FileGroups['Primary'].Files[$FileProc]
         if($file){
-            $file.Shrink(100)
+            $file.Shrink(100,'Default')
             $file.Size = $DataFileSizeSingle
             $file.Alter()
         }
         else{
-            $NewFile = New-Object -TypeName Microsoft.SqlServer.Management.Smo.DataFile
-            $NewFile.Parent = $srv.Databases['TempDB'].FileGroups['Primary']
-            $NewFile.Name = "tempdev$FileProc"
+            $FG = $srv.Databases['TempDB'].FileGroups['Primary']
+            $NewFile = New-Object -TypeName Microsoft.SqlServer.Management.Smo.DataFile ($FG, "tempdev$FileProc")
             $NewFile.FileName = Join-Path -Path $FilePath -ChildPath "tempdev$FileProc.ndf"
             $NewFile.Size = $DataFileSizeSingle
             $NewFile.Growth = 524288
-            $NewFile.GrowthType = "KB"
+            $NewFile.GrowthType = 'KB'
             $NewFile.MaxSize = -1
-            $NewFile.Create()
+            $FG.Files.Add($NewFile)
+            $FG.Alter()
         }
+        $FileProc += 1
     }
 
-    $LogFileSize = [Math]::Floor($DataFileSizeMB/4/1024.0)
+    $LogFileSize = [Math]::Floor($DataFileSizeMB/4*1024.0)
 
     $logfile = $srv.Databases['TempDB'].LogFiles[0]
-    $logfile.Shrink(100)
+    $logfile.Shrink(100,'Default')
     $logfile.Growth = 524288
-    $logfile.GrowthType = "KB"
+    $logfile.GrowthType = 'KB'
     $logfile.MaxSize = -1
     $logfile.Alter()
 
@@ -140,6 +142,7 @@ Configure-TempDB{
         while($logfile.Size -lt $LogFileSize){
             $logfile.size += 8192000
             $logfile.Alter()
+        }
     }
 }
             

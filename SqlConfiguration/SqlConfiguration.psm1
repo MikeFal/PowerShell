@@ -2,7 +2,7 @@
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
 $ErrorActionPreference = 'Inquire'
 
-function Configure-SQLMemory{
+function Set-SQLMemory{
 param([string]$InstanceName)
 
 $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
@@ -33,7 +33,7 @@ while($totalmem -gt 0){
 
 }
 
-function Configure-DefaultDBDirectories{
+function Set-DefaultDBDirectories{
 param([string]$InstanceName,
       [string]$DefaultDB,
       [string]$DefaultLog,
@@ -42,22 +42,13 @@ param([string]$InstanceName,
     $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
     $sqlhost = $srv.ComputerNamePhysicalNetBIOS
 
-    $paths = @{'File' = $DefaultDB; 'Log' = $DefaultLog; 'Backup' = $DefaultBackup}
-    foreach($path in $paths){
-        if(Invoke-Command -ComputerName $sqlhost -ScriptBlock {Test-Path $path.Value}){
-            switch ($path.Name){
-                'File'   { $srv.DefaultFile = $path.Value}
-                'Log'    { $srv.DefaultLog = $path.Value}
-                'Backup' { $srv.BackupDirectory = $path.Value}
-            }
-
-            $srv.Alter()
-
-        }
-    }
+    if (($DefaultDB)){"file";$srv.DefaultFile = $DefaultDB}
+    if (($DefaultLog)){"log";$srv.DefaultLog = $DefaultLog}
+    if (($DefaultBackup)){"backup";$srv.BackupDirectory = $DefaultBackup}
+    $srv.Alter()
 }
 
-function Configure-MasterDB{
+function Set-MasterDB{
 param([string]$InstanceName)
 
     $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
@@ -75,7 +66,7 @@ param([string]$InstanceName)
 }
 
 
-function Configure-MSDB{
+function Set-MSDB{
 param([string]$InstanceName,
         [int]$DataSizeKB = 2048000,
         [int]$LogSizeKB = 204800)
@@ -92,7 +83,7 @@ param([string]$InstanceName,
     }
 }
 
-function Configure-TempDB{
+function Set-TempDB{
     param([string]$InstanceName,
         [int]$CpuCount = 8,
         [int]$DataFileSizeMB = 32768)

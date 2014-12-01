@@ -40,12 +40,19 @@ param([string]$InstanceName,
       [string]$DefaultBackup)
 
     $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
-    $sqlhost = $srv.ComputerNamePhysicalNetBIOS
 
-    if (($DefaultDB)){"file";$srv.DefaultFile = $DefaultDB}
-    if (($DefaultLog)){"log";$srv.DefaultLog = $DefaultLog}
-    if (($DefaultBackup)){"backup";$srv.BackupDirectory = $DefaultBackup}
-    $srv.Alter()
+    if (($DefaultDB)){$srv.DefaultFile = $DefaultDB;$srv.Alter()}
+    if (($DefaultLog)){$srv.DefaultLog = $DefaultLog;$srv.Alter()}
+    if (($DefaultBackup)){$srv.BackupDirectory = $DefaultBackup;$srv.Alter()}
+
+    
+    $svc = Get-Service $srv.ServiceName
+
+    $svc.Stop()
+
+    while($svc.status -ne 'Stopped'){$svc.Refresh();Write-Verbose "Waiting for $svc.name to stop"; Start-Sleep -s 1}
+    $svc.Start()
+    
 }
 
 function Set-MasterDB{
@@ -55,12 +62,16 @@ param([string]$InstanceName)
 
     if ($srv.Databases['master'].FileGroups['Primary'].Files['master'].Size -lt 102400){
         $srv.Databases['master'].FileGroups['Primary'].Files['master'].Size = 102400
+        $srv.Databases['master'].FileGroups['Primary'].Files['master'].Growth = 102400
+        $srv.Databases['master'].FileGroups['Primary'].Files['master'].GrowthType = 'KB'
         $srv.Databases['master'].FileGroups['Primary'].Files['master'].Alter()
         
     }
 
     if ($srv.Databases['master'].LogFiles['mastlog'].Size -lt 102400){
         $srv.Databases['master'].LogFiles['mastlog'].Size = 102400
+        $srv.Databases['master'].LogFiles['mastlog'].Growth = 102400
+        $srv.Databases['master'].LogFiles['mastlog'].GrowthType = 'KB'
         $srv.Databases['master'].LogFiles['mastlog'].Alter()
     }
 }
@@ -69,17 +80,24 @@ param([string]$InstanceName)
 function Set-MSDB{
 param([string]$InstanceName,
         [int]$DataSizeKB = 2048000,
-        [int]$LogSizeKB = 204800)
+        [int]$DataGrowthKB = 512000,
+        [int]$LogSizeKB = 204800,
+        [int]$LogGrowthKB =102400)
 
     $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
 
     if ($srv.Databases['msdb'].FileGroups['Primary'].Files['msdbdata'].Size -lt $DataSizeKB){
         $srv.Databases['msdb'].FileGroups['Primary'].Files['msdbdata'].Size = $DataSizeKB
+        $srv.Databases['msdb'].FileGroups['Primary'].Files['msdbdata'].Growth = $DataGrowthKB
+        $srv.Databases['msdb'].FileGroups['Primary'].Files['msdbdata'].GrowthType = 'KB'
         $srv.Databases['msdb'].FileGroups['Primary'].Files['msdbdata'].Alter()
     }
 
     if ($srv.Databases['msdb'].LogFiles['msdblog'].Size -lt $LogSizeKB){
         $srv.Databases['msdb'].LogFiles['msdblog'].Size = $LogSizeKB
+        $srv.Databases['msdb'].LogFiles['msdblog'].Growth = $LogGrowthKB
+        $srv.Databases['msdb'].LogFiles['msdblog'].GrowthType = 'KB'
+        $srv.Databases['msdb'].LogFiles['msdblog'].alter()
     }
 }
 
@@ -100,6 +118,8 @@ function Set-TempDB{
         if($file){
             $file.Shrink(100,'Default')
             $file.Size = $DataFileSizeSingle
+            $file.Growth = 524288
+            $file.GrowthType = 'KB'
             $file.Alter()
         }
         else{

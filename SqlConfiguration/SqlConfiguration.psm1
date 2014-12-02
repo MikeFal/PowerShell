@@ -158,3 +158,28 @@ function Set-TempDB{
 }
             
 
+function Set-SQLStartupParameters{
+    param([string]$InstanceName,
+        [string[]]$StartupParams)
+
+    $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
+
+    if($srv.InstanceName.Length -eq 0){
+        $srvinstance = 'MSSQLSERVER'
+    }
+    else{
+        $srvinstance = $srv.InstanceName
+    }
+
+    $regroot = 'HKLM:\Software\Microsoft\Microsoft SQL Server'
+    $reginst = Get-ItemProperty "$regroot\Instance Names\SQL"
+    $instname = $reginst.$srvinstance
+
+    $sqlreg = "$regroot\$instname\MSSQLServer\Parameters"
+    $reg = Get-ItemProperty $sqlreg
+    foreach($param in $StartupParams){
+        $argcount = ($reg.PsObject.Properties | Where-Object {$_.Name -like 'SQLArg*' }).Count
+        $newparam = "SQLArg$argcount"
+        Set-ItemProperty -Path $sqlreg -Name $newparam -Value $param 
+    }
+}

@@ -1,4 +1,5 @@
-﻿function Get-FileVolume{
+﻿#This is a comment
+function Get-FileVolume{
     param([string]$PathName)
 
     $check = $PathName.Substring(0,$PathName.LastIndexOf('\')+1)

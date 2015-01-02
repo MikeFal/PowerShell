@@ -65,9 +65,9 @@ switch($output)
 		}
 	1 {
 			#Set these for your environment
-			$smtp="mailhost-mci.ghx.com"
-			$from="SvcAlert@ghx.com"
-			$to="mfal@ghx.com"
+			$smtp="smtp.gmail.com"
+			$from="dummy@sdflab.com"
+			$to="michael_fal@outlook.com"
 			
 			if(($report | where {$_.State -ne "Running"}).Length -gt 0)
 			{

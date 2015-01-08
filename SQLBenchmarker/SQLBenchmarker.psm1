@@ -50,11 +50,11 @@ function Get-SQLIO{
         $smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
         $ComputerName = $smo.ComputerNamePhysicalNetBIOS
 
-        $Samples = [Math]::Ceiling($DurationSec/5)
+        #$Samples = [Math]::Ceiling($DurationSec/5)
         $output = @() 
         $drives = @()
         $counters = @()
-        $files = Invoke-Sqlcmd -ServerInstance localhost -Database tempdb -Query 'SELECT physical_name FROM sys.master_files'
+        $files = Invoke-Sqlcmd -ServerInstance $InstanceName -Database tempdb -Query 'SELECT physical_name FROM sys.master_files'
 
         foreach($file in $files.Physical_Name){
             [string]$new = (Get-FileVolume -PathName $file -ComputerName $ComputerName).name
@@ -69,7 +69,7 @@ function Get-SQLIO{
             $counters += "\LogicalDisk($drive)\Disk Transfers/sec"
         }
 
-       $DiskInfo = Get-Counter -ComputerName $ComputerName -Counter $counters -SampleInterval 5 -MaxSamples $samples
+       $DiskInfo = Get-Counter -ComputerName $ComputerName -Counter $counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
 
         foreach($drive in $drives){
             $Reads = $DiskInfo.CounterSamples | where {$_.InstanceName -eq $drive -and $_.path -like '*sec/Read'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
@@ -78,16 +78,17 @@ function Get-SQLIO{
 
             $row = New-Object System.Object
             $row | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
-            $row | Add-Member -type NoteProperty -name Volume -Value $drives
-            $row | Add-Member -type NoteProperty -name AvgReadLatencyMS -Value ($Reads.Average * 1000)
-            $row | Add-Member -type NoteProperty -name MinReadLatencyMS -Value ($Reads.Minimum * 1000)
-            $row | Add-Member -type NoteProperty -name MaxReadLatencyMS -Value ($Reads.Maximum * 1000)
-            $row | Add-Member -type NoteProperty -name AvgWriteLatencyMS -Value ($Writes.Average * 1000)
-            $row | Add-Member -type NoteProperty -name MinWriteLatencyMS -Value ($Writes.Minimum * 1000)
-            $row | Add-Member -type NoteProperty -name MaxWriteLatencyMS -Value ($Writes.Maximum * 1000)
-            $row | Add-Member -type NoteProperty -name AvgIOPs -Value $IOPs.Average 
-            $row | Add-Member -type NoteProperty -name MinIOPs -Value $IOPs.Minimum
-            $row | Add-Member -type NoteProperty -name MaxIOPs -Value $IOPs.Maximum
+            $row | Add-Member -type NoteProperty -name Volume -Value $drive
+
+            $row | Add-Member -type NoteProperty -name AvgReadLatencyMS -Value ("{0:N2}" -f ($Reads.Average * 1000))
+            $row | Add-Member -type NoteProperty -name MinReadLatencyMS -Value ("{0:N2}" -f ($Reads.Minimum * 1000))
+            $row | Add-Member -type NoteProperty -name MaxReadLatencyMS -Value ("{0:N2}" -f ($Reads.Maximum * 1000))
+            $row | Add-Member -type NoteProperty -name AvgWriteLatencyMS -Value ("{0:N2}" -f ($Writes.Average * 1000))
+            $row | Add-Member -type NoteProperty -name MinWriteLatencyMS -Value ("{0:N2}" -f ($Writes.Minimum * 1000))
+            $row | Add-Member -type NoteProperty -name MaxWriteLatencyMS -Value ("{0:N2}" -f ($Writes.Maximum * 1000))
+            $row | Add-Member -type NoteProperty -name AvgIOPs -Value ("{0:N2}" -f $IOPs.Average)
+            $row | Add-Member -type NoteProperty -name MinIOPs -Value ("{0:N2}" -f $IOPs.Minimum)
+            $row | Add-Member -type NoteProperty -name MaxIOPs -Value ("{0:N2}" -f $IOPs.Maximum)
 
             $output += $row
         }

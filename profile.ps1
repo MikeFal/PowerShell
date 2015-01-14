@@ -1,4 +1,7 @@
-﻿function Get-FreeSpace{
+﻿#load SMO library
+[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
+
+function Get-FreeSpace{
 <#
 .SYNOPSIS
 Uses WMI to get capacity and freespace for all disks/mounts on a host.
@@ -26,19 +29,16 @@ String
 }
 
 function Test-SQLConnection{
-    param([parameter(mandatory=$true)][string] $ComputerName,
-            [int]$Port=1433)
+    param([parameter(mandatory=$true)][string] $InstanceName)
 
+    $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+        
     try{
-        $tcp = New-Object System.Net.Sockets.TcpClient
-        $tcp.connect($ComputerName, $Port)
-        $return=$true
+        $check=$smosrv.Databases['tempdb'].ExecuteWithResults('SELECT @@SERVERNAME')
+        $return = $true
     }
     catch{
         $return=$false
-    }
-    finally{
-        $tcp.Dispose()
     }
 
     return $return
@@ -46,8 +46,7 @@ function Test-SQLConnection{
 
 function Test-SQLAGRole{
     param([parameter(mandatory=$true,ValueFromPipeline=$true)][string] $ComputerName)
-    #load SMO library
-    [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
+
 
     If(Test-SQLConnection -ComputerName $computerName){
         $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $ComputerName

@@ -24,4 +24,37 @@ String
 	 | ft name,@{l="Size(GB)";e={($_.capacity/1gb).ToString("F2")}},@{l="Free Space(GB)";e={($_.freespace/1gb).ToString("F2")}},@{l="% Free";e={(($_.Freespace/$_.Capacity)*100).ToString("F2")}}
 
 }
- 
+
+function Test-SQLConnection{
+    param([parameter(mandatory=$true)][string] $ComputerName,
+            [int]$Port=1433)
+
+    try{
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $tcp.connect($ComputerName, $Port)
+        $return=$true
+    }
+    catch{
+        $return=$false
+    }
+    finally{
+        $tcp.Dispose()
+    }
+
+    return $return
+}
+
+function Test-SQLAGRole{
+    param([parameter(mandatory=$true,ValueFromPipeline=$true)][string] $ComputerName)
+    #load SMO library
+    [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
+
+    If(Test-SQLConnection -ComputerName $computerName){
+        $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $ComputerName
+        if($smosrv.AvailabilityGroups[0].PrimaryReplicaServerName -eq $smosrv.ComputerNamePhysicalNetBIOS){return "Primary"}
+        else{"Secondary"}
+    }
+    else{
+        return "Unreachable"
+    }
+}

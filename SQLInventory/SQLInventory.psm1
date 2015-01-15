@@ -2,9 +2,37 @@
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended") | Out-Null
 [System.reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.SqlWmiManagement") | Out-Null
+$ErrorActionPreference = "Inquire"
 
 function Out-DataTable 
-{ 
+{
+<# 
+.SYNOPSIS 
+Creates a DataTable for an object 
+.DESCRIPTION 
+Creates a DataTable based on an objects properties. 
+.INPUTS 
+Object 
+    Any object can be piped to Out-DataTable 
+.OUTPUTS 
+   System.Data.DataTable 
+.EXAMPLE 
+$dt = Get-psdrive| Out-DataTable 
+This example creates a DataTable from the properties of Get-psdrive and assigns output to $dt variable 
+.NOTES 
+Adapted from script by Marc van Orsouw see link 
+Version History 
+v1.0  - Chad Miller - Initial Release 
+v1.1  - Chad Miller - Fixed Issue with Properties 
+v1.2  - Chad Miller - Added setting column datatype by property as suggested by emp0 
+v1.3  - Chad Miller - Corrected issue with setting datatype on empty properties 
+v1.4  - Chad Miller - Corrected issue with DBNull 
+v1.5  - Chad Miller - Updated example 
+v1.6  - Chad Miller - Added column datatype logic with default to string 
+v1.7 - Chad Miller - Fixed issue with IsArray 
+.LINK 
+http://thepowershellguy.com/blogs/posh/archive/2007/01/21/powershell-gui-scripblock-monitor-script.aspx 
+#> 
     [CmdletBinding()] 
     param([Parameter(Position=0, Mandatory=$true, ValueFromPipeline = $true)] [PSObject[]]$InputObject) 
  
@@ -46,7 +74,7 @@ function Out-DataTable
     } 
  
 } #Out-DataTable
-$ErrorActionPreference = "Inquire"
+
 
 
 function Get-Instance([string]$name)
@@ -78,7 +106,8 @@ try
 }
 catch
 {
-	write-host "Error collecting $name"
+    $msg = "Error collecting $name" +  $error[0]
+	write-error $msg
 	return $null
 }
 }#Get-Instance
@@ -166,6 +195,6 @@ function Get-SQLInventory{
     $smoadmin.Databases[$invdb].ExecuteNonQuery('execute dbo.dbasp_ProcessInventory;')
 }
 
-Get-SQLInventory -invlist @('localhost','localhost\ALBEDO')
+
 
 

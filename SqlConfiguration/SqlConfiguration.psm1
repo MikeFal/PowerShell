@@ -2,7 +2,7 @@
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
 $ErrorActionPreference = 'Inquire'
 
-function Set-SQLMemory{
+function Optimize-SQLMemory{
 param([string]$InstanceName)
 
 $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName

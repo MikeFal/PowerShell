@@ -32,13 +32,14 @@ function Test-SQLConnection{
     param([parameter(mandatory=$true)][string] $InstanceName)
 
     $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
-        
+    $return = New-Object –TypeName PSObject –Prop @{'InstanceName'=$InstanceName;'StartupTime'=$null}
     try{
         $check=$smosrv.Databases['tempdb'].ExecuteWithResults('SELECT @@SERVERNAME')
-        $return = $true
+        $return.InstanceName = $smosrv.Name
+        $return.StartupTime = $smosrv.Databases['tempdb'].CreateDate
     }
     catch{
-        $return=$false
+        #do nothing on the catch
     }
 
     return $return

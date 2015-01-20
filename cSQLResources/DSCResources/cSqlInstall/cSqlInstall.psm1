@@ -93,7 +93,7 @@ function Set-TargetResource
         Write-Verbose "Configuration Path validated."
     
         $installcmd = Join-Path -Path $InstallPath -ChildPath 'setup.exe'
-        $installcmd += " /QUIET /INDICATEPROGRESS=TRUE /INSTANCENAME=$InstanceName /INSTANCEID=$InstanceName"
+        $installcmd += " /QUIET /INDICATEPROGRESS=TRUE /INSTANCENAME=$InstanceName /INSTANCEID=$InstanceName  /CONFIGURATIONFILE=$ConfigPath"
 
         if($UpdateEnabled){
             if(!(Test-Path $UpdatePath)){
@@ -101,7 +101,7 @@ function Set-TargetResource
                 return
             }
             Write-Verbose "Update Path validated"
-            $installcmd += " /UPDATEENABLED=TRUE /UPDATESOURCE=$UpdatePath /CONFIGURATIONFILE=$ConfigPath"
+            $installcmd += " /UPDATEENABLED=TRUE /UPDATESOURCE=$UpdatePath"
         }
 
         if($MixedMode){

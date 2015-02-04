@@ -183,3 +183,17 @@ function Set-SQLStartupParameters{
         Set-ItemProperty -Path $sqlreg -Name $newparam -Value $param 
     }
 }
+
+function Set-SQLMaxdop{
+    param([string]$InstanceName)
+
+    $cores = (Get-WmiObject Win32_Processor -ComputerName).NumberOfLogicalProcessors
+    $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
+    if($cores -gt 8) {
+        $maxdop = 8
+        }
+    else {
+        $maxdop = [Math]::Ceiling($cores/2)
+        }
+    $srv.Configuration.MaxDegreeOfParallelism.ConfigValue = $maxdop
+}

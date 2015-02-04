@@ -2,7 +2,7 @@
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
 $ErrorActionPreference = 'Inquire'
 
-function Optimize-SQLMemory{
+function Set-SQLMemory{
 param([string]$InstanceName)
 
 $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
@@ -187,7 +187,7 @@ function Set-SQLStartupParameters{
 function Set-SQLMaxdop{
     param([string]$InstanceName)
 
-    $cores = (Get-WmiObject Win32_Processor -ComputerName).NumberOfLogicalProcessors
+    $cores = (Get-WmiObject Win32_Processor -ComputerName $InstanceName).NumberOfLogicalProcessors
     $srv = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server $InstanceName
     if($cores -gt 8) {
         $maxdop = 8

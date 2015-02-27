@@ -78,36 +78,26 @@ function Set-TargetResource
         $MixedMode = $false
 	)
     try{    
-        if(!(Test-Path 'C:\DSCLog')) {mkdir 'C:\DSCLog'}
-        
-        $log = 'C:\DSCLog\CSqlInstall_' + (Get-Date -Format 'YYYYMMddHHmm') + '.log'
-        New-Item -ItemType File $log
-
         if(!(Test-Path $InstallPath)){
-            #Write-Verbose "Invalid Installation Path $InstallPath.  Halting configuration."
-            "Invalid Installation Path $InstallPath.  Halting configuration." | Out-File $log
+            Write-Error "Invalid Installation Path $InstallPath.  Halting configuration."
+            #"Invalid Installation Path $InstallPath.  Halting configuration." | Out-File $log
             return
         }
     
-        #Write-Verbose "Installation Path validated."
-        "Installation Path validated."| Out-File $log
+        Write-Verbose "Installation Path validated."
     
         if(!(Test-Path $ConfigPath)){
-            #Write-Verbose "Invalid Configuration Path $ConfigPath.  Halting configuration."
-            "Invalid Configuration Path $ConfigPath.  Halting configuration." | Out-File $log
-            return
+            Write-Error "Invalid Configuration Path $ConfigPath.  Halting configuration."
         }
     
-        #Write-Verbose "Configuration Path validated."
-        "Configuration Path validated."| Out-File $log
+        Write-Verbose "Configuration Path validated."
     
         $installcmd = Join-Path -Path $InstallPath -ChildPath 'setup.exe'
         $installcmd += " /QUIET /INDICATEPROGRESS=TRUE /INSTANCENAME=$InstanceName /INSTANCEID=$InstanceName  /CONFIGURATIONFILE=$ConfigPath"
 
         if($UpdateEnabled){
             if(!(Test-Path $UpdatePath)){
-                Write-Verbose "Invalid Update Path $UpdatePath.  Halting configuration."
-                return
+                Write-Error "Invalid Update Path $UpdatePath.  Halting configuration."
             }
             Write-Verbose "Update Path validated"
             $installcmd += " /UPDATEENABLED=TRUE /UPDATESOURCE=$UpdatePath"
@@ -121,23 +111,21 @@ function Set-TargetResource
 
         $installcmd += " /IACCEPTSQLSERVERLICENSETERMS"
 
-        #Write-Verbose "Attempting install with: `n $installcmd"
-        "Attempting install with: `n $installcmd" | Out-File $log
+        Write-Verbose "Attempting install with: `n $installcmd"
         Invoke-Expression $installcmd
 
         $log =  Get-ChildItem 'C:\Program Files\Microsoft SQL Server' -Recurse | Where-Object {$_.FullName -like '*Setup Bootstrap*' -and $_.Name -eq 'Summary.txt'} |Sort-Object -Property LastWriteTime -Descending|Select-Object -First 1
         $InstallCheck = ($log |Get-Content |Select-Object -Skip 1 -First 1).Contains('Passed')
 
         if(!($InstallCheck)){
-            throw 'Installation Unsuccessful'
+            Write-Error 'Installation Unsuccessful'
         }
 
         'Installation successful, restarting server.' | Out-File $log
         $global:DSCMachineStatus = 1
     }
     catch{
-        #Write-Verbose 'SQL Server Installation failed.'
-        'SQL Server Installation failed.' | Out-File $log
+        Write-Verbose 'SQL Server Installation failed.'
     }
 }
 

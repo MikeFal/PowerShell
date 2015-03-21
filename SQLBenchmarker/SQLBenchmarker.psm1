@@ -24,17 +24,21 @@ function Get-SQLTxnCount{
         ,[int]$DurationSec)
 
         $smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
-        $ComputerName = $smo.$smo.ComputerNamePhysicalNetBIOS
+        $ComputerName = $smo.ComputerNamePhysicalNetBIOS
 
         $Samples = [Math]::Ceiling($DurationSec/5)
         $output = New-Object System.Object
-        $Counters = @('\SQLServer:SQL Statistics\Batch Requests/sec')
+        if($smo.InstanceName -gt 0){
+            $Counters = @('\MSSQL`$'+$smo.InstanceName+':SQL Statistics\Batch Requests/sec')
+        }
+        else{
+            $Counters = @('\SQLServer:SQL Statistics\Batch Requests/sec')
+        }
 
         $Txns = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples $samples
-
         $Summary=$Txns.countersamples | Measure-Object -Property CookedValue -Minimum -Maximum -Average
 
-        $output | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
+        $output | Add-Member -type NoteProperty -name InstanceName -Value $smo.DomainInstanceName
         $output | Add-Member -type NoteProperty -name AvgTxnPerSecond -Value $Summary.Average
         $output | Add-Member -type NoteProperty -name MinTxnPerSecond -Value $Summary.Minimum
         $output | Add-Member -type NoteProperty -name MaxTxnPersecond -Value $Summary.Maximum

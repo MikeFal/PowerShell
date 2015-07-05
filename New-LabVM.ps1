@@ -30,4 +30,4 @@ Get-VM -Name $VMName | Start-VM
 }
 
 #New-LabVM -VMName 'Kirk-Core' -InstallType Core
-New-LabVM -VMName 'Spock-Core' -InstallType Core
+New-LabVM -VMName 'Wesley-Full' -InstallType Full

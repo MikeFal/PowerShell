@@ -32,6 +32,7 @@
   <ItemGroup>
     <Compile Include="SQLBenchmarker.psd1" />
     <Compile Include="Module.test.ps1" />
+    <Compile Include="Test.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" />

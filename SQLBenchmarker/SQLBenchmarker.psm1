@@ -114,23 +114,12 @@ function Get-SQLCPUStats{
 		else{
 				    
 			$OSCPU = $CPUStats.CounterSamples | where {$_.path -like '*\Processor*'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
-			$SQLCPU = ($CPUStats.CounterSamples | where {$_.path -like '*\Thread*'} | Group-Object -Property Timestamp | `
-				ForEach-Object {
-					New-Object psobject -Property @{
-						Timestamp = $_.Name
-						CookedValue = ($_.Group | Measure-Object CookedValue -Sum).Sum
-					}
-				}) | Measure-Object -Property CookedValue -Average -Minimum -Maximum
-
 			$output = New-Object System.Object
 			$output | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
 			
 			$output | Add-Member -type NoteProperty -name AvgOSCPU -Value ("{0:N2}" -f $OSCPU.Average)
 			$output | Add-Member -type NoteProperty -name MinOSCPU -Value ("{0:N2}" -f $OSCPU.Minimum)
 			$output | Add-Member -type NoteProperty -name MaxOSCPU -Value ("{0:N2}" -f $OSCPU.Maximum)
-			$output | Add-Member -type NoteProperty -name AvgSQLCPU -Value ("{0:N2}" -f $SQLCPU.Average)
-			$output | Add-Member -type NoteProperty -name MinSQLCPU -Value ("{0:N2}" -f $SQLCPU.Minimum)
-			$output | Add-Member -type NoteProperty -name MaxSQLCPU -Value ("{0:N2}" -f $SQLCPU.Maximum)
 			
 			return $output
 		}

@@ -191,3 +191,69 @@ function Set-SQLMaxdop{
         }
     $srv.Configuration.MaxDegreeOfParallelism.ConfigValue = $maxdop
 }
+
+function Test-SQLConfiguration{
+    param([string]$InstanceName='localhost'
+        ,[Parameter(Mandatory=$true)][PSObject] $Configs
+        )
+    $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+    $output = @()
+
+    foreach($config in $configs){
+        if($config.DesiredValue -ne $smosrv.Configuration.$($config.Name).RunValue){
+            $output += New-Object PSObject -Property (@{'Configuration'=$config.Name;
+                                                    'DesiredValue'=$config.DesiredValue;
+                                                    'CurrentValue'=$smosrv.Configuration.$($config.Name).RunValue})
+        }
+    }
+
+    return $output
+}
+
+function Set-SQLConfiguration{
+    param([string]$InstanceName='localhost'
+        ,[Parameter(Mandatory=$true)][PSObject] $Configs
+        )
+    $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+    $output = @()
+
+    foreach($config in $configs){
+        if($config.DesiredValue -ne $smosrv.Configuration.$($config.Name).RunValue){
+
+            $row = New-Object PSObject -Property (@{'Configuration'=$config.Name;
+                                                    'DesiredValue'=$config.DesiredValue;
+                                                    'CurrentValue'=$smosrv.Configuration.$($config.Name).RunValue})
+            $smosrv.Configuration.$($config.Name).ConfigValue = $Config.DesiredValue
+            $smosrv.Configuration.Alter()
+            $row | Add-Member -MemberType NoteProperty -Name 'ConfiguredValue' -Value $smosrv.Configuration.$($config.Name).RunValue
+            $output += $row
+            if($smosrv.Configuration.$($config.Name).IsDynamic -eq $false){$reboot=$true}
+        }
+    }
+
+    if($reboot){Write-Warning 'Altered configurations contain some that are not dynamic. Instance restart is required to apply.'}
+
+    return $output
+
+}
+
+function Get-SQLConfiguration{
+    param([string]$InstanceName='localhost'
+            ,[string[]] $Filter
+        )
+    $smosrv = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+    $output = @()
+    if($Filter){
+        $configs = $smosrv.Configuration | Get-Member -MemberType Properties | Where-Object {$Filter.Contains($_.Name)}
+    }
+    else{
+        $configs = $smosrv.Configuration | Get-Member -MemberType Properties | Where-Object {$_.Name -ne 'Properties'}
+    }
+
+    foreach($config in $configs){
+        $output += New-Object PSObject -Property ([Ordered]@{'Configuration'=$config.Name;
+                                                    'DesiredValue'=$smosrv.Configuration.$($config.Name).RunValue})
+    }
+
+    return $output
+}

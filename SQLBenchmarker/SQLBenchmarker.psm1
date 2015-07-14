@@ -36,7 +36,7 @@ function Get-SQLTxnCount{
         $Txns = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples $samples
         $Summary=$Txns.countersamples | Measure-Object -Property CookedValue -Minimum -Maximum -Average
 
-        $output | Add-Member -type NoteProperty -name InstanceName -Value $smo.DomainInstanceName
+        #$output | Add-Member -type NoteProperty -name InstanceName -Value $smo.DomainInstanceName
         $output | Add-Member -type NoteProperty -name AvgTxnPerSecond -Value $Summary.Average
         $output | Add-Member -type NoteProperty -name MinTxnPerSecond -Value $Summary.Minimum
         $output | Add-Member -type NoteProperty -name MaxTxnPersecond -Value $Summary.Maximum
@@ -78,7 +78,7 @@ function Get-SQLMemoryStats{
 			$MBytes = $MemStats.CounterSamples | where {$_.path -like '*Available MBytes'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
 
 			$output = New-Object System.Object
-			$output | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
+			#$output | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
 			
 			$output | Add-Member -type NoteProperty -name AvgPLE -Value ("{0:N2}" -f $PLE.Average)
 			$output | Add-Member -type NoteProperty -name MinPLE -Value ("{0:N2}" -f $PLE.Minimum)
@@ -105,7 +105,7 @@ function Get-SQLCPUStats{
         $smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
         $ComputerName = $smo.ComputerNamePhysicalNetBIOS
  
-		$Counters = @('\Processor(_Total)\% Processor Time','\Thread(*sqlservr*)\% Processor Time')
+		$Counters = @('\Processor(_Total)\% Processor Time')
 
         $CPUStats = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
         if($Detail){
@@ -115,7 +115,7 @@ function Get-SQLCPUStats{
 				    
 			$OSCPU = $CPUStats.CounterSamples | where {$_.path -like '*\Processor*'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
 			$output = New-Object System.Object
-			$output | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
+			#$output | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
 			
 			$output | Add-Member -type NoteProperty -name AvgOSCPU -Value ("{0:N2}" -f $OSCPU.Average)
 			$output | Add-Member -type NoteProperty -name MinOSCPU -Value ("{0:N2}" -f $OSCPU.Minimum)
@@ -162,7 +162,7 @@ function Get-SQLIO{
 				$IOPs = $DiskInfo.CounterSamples | where {$_.InstanceName -eq $drive -and $_.path -like '*Transfers/sec'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
 
 				$row = New-Object System.Object
-				$row | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
+				#$row | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
 				$row | Add-Member -type NoteProperty -name Volume -Value $drive
 
 				$row | Add-Member -type NoteProperty -name AvgReadLatencyMS -Value ("{0:N2}" -f ($Reads.Average * 1000))
@@ -186,7 +186,7 @@ param([string]$InstanceName='localhost'
         ,[int]$DurationSec=5
 	)
 
-	$smo = new-object ('Microsoft.SqlServer.Management.Smo.Server')
+	$smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
 
 	$tlbname = $tblname = 'WS_'+(([char[]]([char]'a'..[char]'z') + 0..9 | sort {get-random})[0..5] -join '').ToUpper()
 	$sqlstart = "SELECT wait_type,waiting_tasks_count,wait_time_ms INTO $tblname FROM sys.dm_os_wait_stats;"
@@ -222,11 +222,60 @@ AND e.[waiting_tasks_count] > 0
 "@
 
 	$smo.Databases['tempdb'].ExecuteNonQuery($sqlstart)
-	Start-Sleep -Seconds $duration
+	Start-Sleep -Seconds $DurationSec
 	$output = ($smo.Databases['tempdb'].ExecuteWithResults($sqlend)).Tables[0]
 	$smo.Databases['tempdb'].ExecuteNonQuery("DROP TABLE $tblname;")
 
 	return $output | Sort-Object -Property wait_time_ms -Descending | Select-Object -First 10
 
 
+}
+
+function New-SQLBenchmarkReport{
+param([string]$InstanceName='localhost'
+		,[int]$DurationSec=5
+		,[string]$OutputPath = [environment]::getfolderpath("mydocuments")
+		,[Switch]$AutoOpen
+	)
+
+	$CPU = Start-Job {Get-SQLCPUStats -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
+	$IO = Start-Job {Get-SQLIO -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
+	$Memory = Start-Job {Get-SQLMemoryStats -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
+	$TxnCount = Start-Job {Get-SQLTxnCount -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
+	$Waits = Start-Job {Get-SQLWaitStats -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
+
+	$start = Get-Date
+	$secs = 0
+	while((Get-Job | Where {$_.state -eq 'Running'} | Measure-Object).Count -gt 0){
+		Write-Progress -Activity 'Running Benchmark...' -PercentComplete (($secs/$DurationSec)*100)
+		Start-Sleep -Seconds 1
+		if($secs -lt $DurationSec){$secs += 1}
+	}
+
+	$filename = Join-Path $OutputPath -ChildPath "Benchmark-$InstanceName-$($start.ToString('yyyyMMddHHmmss')).txt"
+
+	$output = @($CPU,$IO,$Memory,$TxnCount,$Waits)
+
+	"Benchmark report for InstanceName" | Out-File $filename
+	"Benchmark Runtime: $DurationSec seconds" | Out-File $filename -Append
+	"Start Time: $($start.ToString('HH:mm:ss - MMM dd, yyyy'))" | Out-File $filename -Append
+
+	"CPU Statistics" | Out-File $filename -Append
+	"-------------------------------------------------" | Out-File $filename -Append
+	$CPU |Receive-Job | Select-Object * -ExcludeProperty RunspaceId | Format-List | Out-File $filename -Append
+
+	"Disk IO Statistics" | Out-File $filename -Append
+	"-------------------------------------------------" | Out-File $filename -Append 
+	$IO | Receive-Job | Select-Object * -ExcludeProperty RunspaceId | Format-Table -AutoSize | Out-File $filename -Append -Width 200
+
+	"SQL Memory Statistics" | Out-File $filename -Append
+	"-------------------------------------------------" | Out-File $filename -Append
+	$Memory | Receive-Job| Select-Object * -ExcludeProperty RunspaceId | Format-List | Out-File $filename -Append
+
+	"SQL Activity Statistics" | Out-File $filename -Append
+	"-------------------------------------------------" | Out-File $filename -Append
+	$TxnCount | Receive-Job| Select-Object * -ExcludeProperty RunspaceId | Format-List | Out-File $filename -Append
+	$Waits | Receive-Job| Select-Object * -ExcludeProperty RunspaceId | Format-Table -AutoSize | Out-File $filename -Append
+
+	if($AutoOpen){notepad $filename}
 }

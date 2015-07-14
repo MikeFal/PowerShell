@@ -30,6 +30,7 @@
     <Content Include="SQLBenchmarker.psm1" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="junk.ps1" />
     <Compile Include="SQLBenchmarker.psd1" />
     <Compile Include="Module.test.ps1" />
   </ItemGroup>

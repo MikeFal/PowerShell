@@ -45,13 +45,7 @@ param([string]$InstanceName,
     if (($DefaultLog)){$srv.DefaultLog = $DefaultLog;$srv.Alter()}
     if (($DefaultBackup)){$srv.BackupDirectory = $DefaultBackup;$srv.Alter()}
 
-    
-    $svc = Get-Service $srv.ServiceName
-
-    $svc.Stop()
-
-    while($svc.status -ne 'Stopped'){$svc.Refresh();Write-Verbose "Waiting for $svc.name to stop"; Start-Sleep -s 1}
-    $svc.Start()
+    Write-Verbose 'Service should be restarted for all changes to take effect.'
     
 }
 

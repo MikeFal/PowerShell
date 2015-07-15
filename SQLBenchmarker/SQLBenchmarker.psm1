@@ -22,24 +22,30 @@ function Get-SQLTxnCount{
 		,[Switch] $Detail)
 
         $smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+		$smo.ConnectionContext.Connect()
+
         $ComputerName = $smo.ComputerNamePhysicalNetBIOS
 
         $Samples = [Math]::Ceiling($DurationSec/5)
         $output = New-Object System.Object
         if($smo.InstanceName -gt 0){
-            $Counters = @('\MSSQL`$'+$smo.InstanceName+':SQL Statistics\Batch Requests/sec')
+            $Counters = @('\MSSQL`$'+$smo.InstanceName+':SQL Statistics\Batch Requests/sec','\MSSQL`$'+$smo.InstanceName+':General Statistics\User Connections')
         }
         else{
-            $Counters = @('\SQLServer:SQL Statistics\Batch Requests/sec')
+            $Counters = @('\SQLServer:SQL Statistics\Batch Requests/sec','\SQLServer:General Statistics\User Connections')
         }
 
         $Txns = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples $samples
-        $Summary=$Txns.countersamples | Measure-Object -Property CookedValue -Minimum -Maximum -Average
+        $TxnSummary=$Txns.countersamples | Where-Object {$_.path -like '*Batch Requests/sec'} | Measure-Object -Property CookedValue -Minimum -Maximum -Average
+		$CxnSummary=$Txns.countersamples | Where-Object {$_.path -like '*User Connections'} | Measure-Object -Property CookedValue -Minimum -Maximum -Average
 
         #$output | Add-Member -type NoteProperty -name InstanceName -Value $smo.DomainInstanceName
-        $output | Add-Member -type NoteProperty -name AvgTxnPerSecond -Value $Summary.Average
-        $output | Add-Member -type NoteProperty -name MinTxnPerSecond -Value $Summary.Minimum
-        $output | Add-Member -type NoteProperty -name MaxTxnPersecond -Value $Summary.Maximum
+        $output | Add-Member -type NoteProperty -name AvgTxnPerSecond -Value ("{0:N2}" -f $TxnSummary.Average)
+        $output | Add-Member -type NoteProperty -name MinTxnPerSecond -Value ("{0:N2}" -f $TxnSummary.Minimum)
+        $output | Add-Member -type NoteProperty -name MaxTxnPersecond -Value ("{0:N2}" -f $TxnSummary.Maximum)
+		$output | Add-Member -type NoteProperty -name AvgUserCxnPerSecond -Value ("{0:N2}" -f $CxnSummary.Average)
+        $output | Add-Member -type NoteProperty -name MinUserCxnPerSecond -Value ("{0:N2}" -f $CxnSummary.Minimum)
+        $output | Add-Member -type NoteProperty -name MaxUserCxnPersecond -Value ("{0:N2}" -f $CxnSummary.Maximum)
 
 		if($Detail){
 			return $Txns.CounterSamples
@@ -55,6 +61,7 @@ function Get-SQLMemoryStats{
 		,[Switch] $Detail)
 
         $smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+		$smo.ConnectionContext.Connect()
         $ComputerName = $smo.ComputerNamePhysicalNetBIOS
         
         if($smo.InstanceName -gt 0){
@@ -103,6 +110,7 @@ function Get-SQLCPUStats{
 		,[Switch] $Detail)
 
         $smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+		$smo.ConnectionContext.Connect()
         $ComputerName = $smo.ComputerNamePhysicalNetBIOS
  
 		$Counters = @('\Processor(_Total)\% Processor Time')
@@ -130,6 +138,7 @@ function Get-SQLIO{
 		,[Switch]$Detail)
 
         $smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+		$smo.ConnectionContext.Connect()
         $ComputerName = $smo.ComputerNamePhysicalNetBIOS
 
         $drives = @()
@@ -187,6 +196,7 @@ param([string]$InstanceName='localhost'
 	)
 
 	$smo = new-object ('Microsoft.SqlServer.Management.Smo.Server') $InstanceName
+	$smo.ConnectionContext.Connect()
 
 	$tlbname = $tblname = 'WS_'+(([char[]]([char]'a'..[char]'z') + 0..9 | sort {get-random})[0..5] -join '').ToUpper()
 	$sqlstart = "SELECT wait_type,waiting_tasks_count,wait_time_ms INTO $tblname FROM sys.dm_os_wait_stats;"
@@ -256,7 +266,7 @@ param([string]$InstanceName='localhost'
 
 	$output = @($CPU,$IO,$Memory,$TxnCount,$Waits)
 
-	"Benchmark report for InstanceName" | Out-File $filename
+	"Benchmark report for $InstanceName" | Out-File $filename
 	"Benchmark Runtime: $DurationSec seconds" | Out-File $filename -Append
 	"Start Time: $($start.ToString('HH:mm:ss - MMM dd, yyyy'))" | Out-File $filename -Append
 

@@ -16,7 +16,7 @@ function Get-FileVolume{
     }
 }
 
-function Get-SQLTxnCount{
+function Get-SQLStatistics{
     param([string]$InstanceName='localhost'
         ,[int]$DurationSec
 		,[Switch] $Detail)

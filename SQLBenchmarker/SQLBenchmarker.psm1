@@ -251,7 +251,7 @@ param([string]$InstanceName='localhost'
 	$CPU = Start-Job {Get-SQLCPUStats -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
 	$IO = Start-Job {Get-SQLIO -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
 	$Memory = Start-Job {Get-SQLMemoryStats -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
-	$TxnCount = Start-Job {Get-SQLTxnCount -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
+	$TxnCount = Start-Job {Get-SQLStatistics -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
 	$Waits = Start-Job {Get-SQLWaitStats -InstanceName $using:InstanceName -DurationSec $using:DurationSec}
 
 	$start = Get-Date

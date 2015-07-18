@@ -143,7 +143,7 @@ function Get-SQLIO{
 
         $drives = @()
         $counters = @()
-        $files = Invoke-Sqlcmd -ServerInstance $InstanceName -Database tempdb -Query 'SELECT physical_name FROM sys.master_files'
+        $files = ($smo.Databases['tempdb'].ExecuteWithResults('SELECT physical_name FROM sys.master_files')).Tables[0]
 
         foreach($file in $files.Physical_Name){
             [string]$new = (Get-FileVolume -PathName $file -ComputerName $ComputerName).name

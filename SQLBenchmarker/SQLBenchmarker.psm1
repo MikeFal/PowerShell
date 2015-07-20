@@ -35,7 +35,12 @@ function Get-SQLStatistics{
             $Counters = @('\SQLServer:SQL Statistics\Batch Requests/sec','\SQLServer:General Statistics\User Connections')
         }
 
-        $Txns = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples $samples
+		if($ComputerName -eq $env:COMPUTERNAME){
+			$Txns = Get-Counter -Counter $Counters -SampleInterval 5 -MaxSamples $samples
+		}
+		else{
+			$Txns = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples $samples
+		}
         $TxnSummary=$Txns.countersamples | Where-Object {$_.path -like '*Batch Requests/sec'} | Measure-Object -Property CookedValue -Minimum -Maximum -Average
 		$CxnSummary=$Txns.countersamples | Where-Object {$_.path -like '*User Connections'} | Measure-Object -Property CookedValue -Minimum -Maximum -Average
 
@@ -73,7 +78,12 @@ function Get-SQLMemoryStats{
 
 		$Counters = $Counters = @("$CounterName`:Buffer Manager\Page Life Expectancy","$CounterName`:Buffer Manager\Buffer cache hit ratio","$CounterName`:Memory Manager\Total Server Memory (KB)","\Memory\Available MBytes")
 
-        $MemStats = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		if($ComputerName -eq $env:COMPUTERNAME){
+			$MemStats = Get-Counter -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		}
+		else{
+			$MemStats = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		}
         if($Detail){
 			return $MemStats.CounterSamples
 		}
@@ -115,7 +125,13 @@ function Get-SQLCPUStats{
  
 		$Counters = @('\Processor(_Total)\% Processor Time')
 
-        $CPUStats = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		if($ComputerName -eq $env:COMPUTERNAME){
+			$CPUStats = Get-Counter -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		}
+		else{
+		    $CPUStats = Get-Counter -ComputerName $ComputerName -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		}
+
         if($Detail){
 			return $CPUStats.CounterSamples
 		}
@@ -158,7 +174,12 @@ function Get-SQLIO{
             $counters += "\LogicalDisk($drive)\Disk Transfers/sec"
         }
 
-       $DiskInfo = Get-Counter -ComputerName $ComputerName -Counter $counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		if($ComputerName -eq $env:COMPUTERNAME){
+			$DiskInfo = Get-Counter -Counter $counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		}
+		else{
+			$DiskInfo = Get-Counter -ComputerName $ComputerName -Counter $counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
+		}
 
         if($Detail){
 			return $DiskInfo.CounterSamples

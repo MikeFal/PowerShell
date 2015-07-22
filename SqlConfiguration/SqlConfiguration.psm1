@@ -251,7 +251,7 @@ function Get-SQLConfiguration{
     }
 
     foreach($config in $configs){
-        $output += New-Object PSObject -Property ([Ordered]@{'Configuration'=$config.Name;
+        $output += New-Object PSObject -Property ([Ordered]@{'Name'=$config.Name;
                                                     'DesiredValue'=$smosrv.Configuration.$($config.Name).RunValue})
     }
 

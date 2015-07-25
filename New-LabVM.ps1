@@ -29,5 +29,6 @@ Rename-VMNetworkAdapter -VMName $VMName -Name 'Network Adapter' -NewName 'LocalN
 Get-VM -Name $VMName | Start-VM
 }
 
-#New-LabVM -VMName 'Kirk-Core' -InstallType Core
-New-LabVM -VMName 'Wesley-Full' -InstallType Full
+New-LabVM -VMName 'Kirk-Core' -InstallType Core
+New-LabVM -VMName 'Spock-Core' -InstallType Core
+#New-LabVM -VMName 'Wesley-Full' -InstallType Full

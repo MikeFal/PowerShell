@@ -6,7 +6,6 @@
         ,[string[]]$ISOs
         ,[string]$VMSource
         ,[Parameter(Mandatory=$true)][System.Management.Automation.PSCredential]$LocalCred
-        ,[ValidateSet('Full','Core')][string]$OSType='Core'
         )
     try{
         $VHDFile = Join-Path -Path $VHDPath -ChildPath "$VMName.vhdx"
@@ -54,13 +53,10 @@
         $NewVM | Start-VM
 
         #Configure appropriate shell
-        Write-Verbose "[$(Get-Date -Format 'HH:mm:ss')]Configuring shell and rename computer..."
+        Write-Verbose "[$(Get-Date -Format 'HH:mm:ss')]Renaming computer..."
         Start-Sleep 60
+        Invoke-Command -VMName $VMName -Credential $LocalCred {Rename-Computer -NewName $using:VMName -Force -Restart;}
 
-        switch($OSType){
-            'Full'{Invoke-Command -VMName $VMName -Credential $LocalCred {Rename-Computer -NewName $using:VMName -Force;Get-WindowsFeature server-gui* | Add-WindowsFeature -Source wim:D:\sources\install.wim:4 –Restart}}
-            'Core'{Invoke-Command -VMName $VMName -Credential $LocalCred {Rename-Computer -NewName $using:VMName -Force;Set-ItemProperty 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\WinLogon' shell 'Powershell.exe -noexit -command "$psversiontable;"';Restart-Computer}}
-        }
         
         Write-Verbose "[$(Get-Date -Format 'HH:mm:ss')]$VMName complete."
         return $NewVM
@@ -76,8 +72,16 @@ If(!(Get-VMSwitch 'HostNetwork')){New-VMSwitch -Name 'HostNetwork' -SwitchType I
 If(!(Get-VMSwitch 'LabNetwork')){New-VMSwitch -Name 'LabNetwork' -SwitchType Private}
 
 #Create GM image
-if(Test-Path F:\VMs\ISOs\GM2016Tp3.vhdx){Remove-Item F:\VMs\ISOs\GM2016Tp3.vhdx}
-Convert-WindowsImage -SourcePath .\en_windows_server_2016_technical_preview_3_x64_dvd_6942082.iso -VHDPath F:\VMs\ISOs\GM2016Tp3.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenterCore -VHDPartitionStyle MBR -UnattendPath .\unattend.xml
+if(Test-Path F:\VMs\ISOs\GM2016Tp3.vhdx){Remove-Item C:\VMs\ISOs\GM2016Tp3.vhdx}
+Convert-WindowsImage -SourcePath C:\VMs\ISOs\en_windows_server_2016_technical_preview_3_x64_dvd_6942082.iso -VHDPath C:\VMs\ISOs\GM2016Tp3.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenterCore -VHDPartitionStyle MBR -UnattendPath C:\VMs\ISOs\unattend.xml
+
+
+if(Test-Path C:\VMs\ISOs\GM2012R2Core.vhdx){Remove-Item C:\VMs\ISOs\GM2012R2Core.vhdx}
+Convert-WindowsImage -SourcePath C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso -VHDPath C:\VMs\ISOs\GM2012R2Core.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerStandardCore -VHDPartitionStyle MBR -UnattendPath C:\VMs\ISOs\unattend.xml -BCDinVHD VirtualMachine
+
+if(Test-Path C:\VMs\ISOs\GM2012R2Full.vhdx){Remove-Item C:\VMs\ISOs\GM2012R2Full.vhdx}
+Convert-WindowsImage -SourcePath C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso -VHDPath C:\VMs\ISOs\GM2012R2Full.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenter -VHDPartitionStyle MBR -UnattendPath C:\VMs\ISOs\unattend.xml
+
 
 #add custom Powershell
 $DriveLetter = (Mount-VHD F:\VMs\ISOs\GM2016Tp3.vhdx –PassThru | Get-Disk | Get-Partition | Get-Volume).DriveLetter
@@ -107,3 +111,24 @@ New-LabVM -VMName $Server.name `
     -Verbose 
 }
 
+
+New-LabVM -VMName 'Test' `
+    -LocalCred $LocalAdminCred `
+    -VMPath 'C:\VMs\Machines' `
+    -VHDPath 'C:\VMs\VHDs' `
+    -ISOs @('C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso','C:\VMs\ISOs\en_sql_server_2014_developer_edition_x64_dvd_3940406.iso') `
+    -VMSource C:\VMs\ISOs\GM2012R2Core.vhdx `
+    -VMSwitches @('Host','VMSWitch') `
+    -Verbose 
+
+
+        switch($OSType){
+            'Full'{Invoke-Command -VMName $VMName -Credential $LocalCred {Rename-Computer -NewName $using:VMName -Force;Get-WindowsFeature server-gui* | Add-WindowsFeature -Source wim:D:\sources\install.wim:4 –Restart}}
+            'Core'Set-ItemProperty 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\WinLogon' shell 'Powershell.exe -noexit -command "$psversiontable;"';Restart-Computer}}
+        }
+
+$VMName = 'Test'
+Invoke-Command -VMName $VMName -Credential $LocalAdminCred {Write-Host $using:VMName}
+
+
+{Rename-Computer -NewName $using:VMName -Confirm -Restart;}

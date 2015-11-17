@@ -64,7 +64,7 @@ function Copy-SqlLogins{
     $outscript += '/****************************************************'
     $outscript += "Login script for $($login.Name)"
     $outscript += '****************************************************/'
-    $outscript += "IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = '$($login.Name)'"
+    $outscript += "IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = '$($login.Name)')"
     $outscript += 'BEGIN'
     $outscript += "$lscript;"
     $outscript += 'END'

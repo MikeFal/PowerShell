@@ -30,14 +30,18 @@ function Copy-SqlLogins{
     ,[string[]] $logins
     ,[Switch] $Script
   )
+  #create SMO objects for actions
   $smosource = new-object ('Microsoft.SqlServer.Management.Smo.Server') $source
   $smotarget = new-object ('Microsoft.SqlServer.Management.Smo.Server') $target 	
   
+  #Scripting options
   $so = new-object microsoft.sqlserver.management.smo.scriptingoptions
   $so.LoginSid = $true
 
+  #output array
   $outscript = @()
   
+  #Get all SMO login objects, filtering out system, NT accounts, and including only selected logins if supplied
   if($logins){
     $matchstring = $logins -join '|'
     $loginsmo = $smosource.logins | Where-Object {$_.Name -match $logins -and $_.IsSystemObject -eq $false -and $_.Name -notlike 'NT*'}
@@ -46,7 +50,9 @@ function Copy-SqlLogins{
     $loginsmo = $smosource.logins | Where-Object {$_.IsSystemObject -eq $false -and $_.Name -notlike 'NT*'}
   }
   
+  #Script each login and add to final output
   foreach($login in $loginsmo){
+    #Filter out SMO's ALTER/DISABLE, comments about random password, and then compress into single string
     $lscript = $login.Script($so) | Where-Object {$_ -notlike 'ALTER LOGIN*DISABLE'}
     $lscript = $lscript.Replace('/* For security reasons the login is created disabled and with a random password. */','').Trim() -join "`n"
     
@@ -61,6 +67,7 @@ function Copy-SqlLogins{
       $lscript = $lscript.Replace($rndpw,"PASSWORD = $passtring hashed")
     }
     
+    #Make the output nice
     $outscript += '/****************************************************'
     $outscript += "Login script for $($login.Name)"
     $outscript += '****************************************************/'
@@ -73,11 +80,16 @@ function Copy-SqlLogins{
   #Clean up formating
   $outscript = $outscript.Replace('WITH',"`nWITH`n`t").Replace(',',"`n`t,")
 
-  if($script){
+  if($Script){
     return $outscript
   }
   else{
-    $smotarget.Databases['tempdb'].ExecuteNonQuery($outscript)
+    if($target.Length -eq 0){
+        Write-Warning 'No target declared. Copy action halted'
+    }
+    else{
+        $smotarget.Databases['tempdb'].ExecuteNonQuery($outscript)
+    }
   }
 }
 

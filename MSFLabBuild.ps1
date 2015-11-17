@@ -67,6 +67,15 @@
     }
 }
 
+if (get-module WindowsImageTools) { Remove-Module WindowsImageTools}
+
+import-module WindowsImageTools
+
+Initialize-VHDPartition -Path $env:temp\temp1.vhdx -Dynamic -Verbose -DiskLayout UEFI -RecoveryImage -force -Passthru |  
+    Set-VHDPartition  -SourcePath $PSScriptRoot\Example.wim -Index 1  -Confirm:$false -force -Verbose 
+
+Convert-Wim2VHD -Path $env:temp\test2.vhdx -SourcePath $PSScriptRoot\Example.wim -DiskLayout BIOS -Dynamic -Index 1 -Size 50GB  -Force -Verbose
+set
 #Create VM Switch
 If(!(Get-VMSwitch 'HostNetwork')){New-VMSwitch -Name 'HostNetwork' -SwitchType Internal}
 If(!(Get-VMSwitch 'LabNetwork')){New-VMSwitch -Name 'LabNetwork' -SwitchType Private}
@@ -75,9 +84,8 @@ If(!(Get-VMSwitch 'LabNetwork')){New-VMSwitch -Name 'LabNetwork' -SwitchType Pri
 if(Test-Path F:\VMs\ISOs\GM2016Tp3.vhdx){Remove-Item C:\VMs\ISOs\GM2016Tp3.vhdx}
 Convert-WindowsImage -SourcePath C:\VMs\ISOs\en_windows_server_2016_technical_preview_3_x64_dvd_6942082.iso -VHDPath C:\VMs\ISOs\GM2016Tp3.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenterCore -VHDPartitionStyle MBR -UnattendPath C:\VMs\ISOs\unattend.xml
 
-
 if(Test-Path C:\VMs\ISOs\GM2012R2Core.vhdx){Remove-Item C:\VMs\ISOs\GM2012R2Core.vhdx}
-Convert-WindowsImage -SourcePath C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso -VHDPath C:\VMs\ISOs\GM2012R2Core.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerStandardCore -VHDPartitionStyle MBR -UnattendPath C:\VMs\ISOs\unattend.xml -BCDinVHD VirtualMachine
+Convert-Wim2VHD -SourcePath C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso -Path C:\VMs\ISOs\GM2012R2Core.vhdx -VHDFormat VHDX -Dynamic -Index 3 -DiskLayout BIOS -Unattend C:\VMs\ISOs\unattend.xml 
 
 if(Test-Path C:\VMs\ISOs\GM2012R2Full.vhdx){Remove-Item C:\VMs\ISOs\GM2012R2Full.vhdx}
 Convert-WindowsImage -SourcePath C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso -VHDPath C:\VMs\ISOs\GM2012R2Full.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenter -VHDPartitionStyle MBR -UnattendPath C:\VMs\ISOs\unattend.xml
@@ -111,15 +119,15 @@ New-LabVM -VMName $Server.name `
     -Verbose 
 }
 
-
-New-LabVM -VMName 'Test' `
+New-LabVM -VMName 'RIKER' `
     -LocalCred $LocalAdminCred `
     -VMPath 'C:\VMs\Machines' `
     -VHDPath 'C:\VMs\VHDs' `
-    -ISOs @('C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso','C:\VMs\ISOs\en_sql_server_2014_developer_edition_x64_dvd_3940406.iso') `
+    -ISOs @('C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso') `
     -VMSource C:\VMs\ISOs\GM2012R2Core.vhdx `
     -VMSwitches @('Host','VMSWitch') `
     -Verbose 
+
 
 
         switch($OSType){
@@ -127,8 +135,28 @@ New-LabVM -VMName 'Test' `
             'Core'Set-ItemProperty 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\WinLogon' shell 'Powershell.exe -noexit -command "$psversiontable;"';Restart-Computer}}
         }
 
-$VMName = 'Test'
-Invoke-Command -VMName $VMName -Credential $LocalAdminCred {Write-Host $using:VMName}
 
 
-{Rename-Computer -NewName $using:VMName -Confirm -Restart;}
+$Servers = @()
+$Servers += New-Object psobject -Property @{Name='VADER';Type='Core';Class='SQLServer'}
+$Servers += New-Object psobject -Property @{Name='TARKIN';Type='Core';Class='SQLServer'}
+
+#create VM
+$pw = ConvertTo-SecureString -String 'vanh0uten!42' -AsPlainText -Force
+$LocalAdminCred = New-Object System.Management.Automation.PSCredential ('localhost\administrator',$pw)
+
+foreach($Server in $Servers){
+
+New-LabVM -VMName $Server.name `
+    -LocalCred $LocalAdminCred `
+    -VMPath 'C:\VMs\Machines' `
+    -VHDPath 'C:\VMs\VHDs' `
+    -ISOs @('C:\VMs\ISOs\en_windows_server_2016_technical_preview_3_x64_dvd_6942082.iso','C:\VMs\ISOs\en_sql_server_2014_developer_edition_x64_dvd_3940406.iso') `
+    -VMSource C:\VMs\ISOs\GM2016Tp3.vhdx `
+    -VMSwitches @('Host','VMSWitch') `
+    -Verbose 
+
+    Invoke-Command -VMName $Server.name `-Credential $LocalAdminCred {Set-ItemProperty 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\WinLogon' shell 'Powershell.exe -noexit -command "$psversiontable;"';Restart-Computer}
+
+}
+

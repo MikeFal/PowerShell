@@ -1,4 +1,5 @@
-﻿[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SqlWmiManagement')| Out-Null
+﻿#HT http://blogs.technet.com/b/heyscriptingguy/archive/2010/11/03/use-powershell-to-change-sql-server-s-service-accounts.aspx
+[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SqlWmiManagement')| Out-Null
 
 function Set-SqlServiceAccount{
     param([string] $Instance

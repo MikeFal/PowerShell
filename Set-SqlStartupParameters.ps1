@@ -1,6 +1,7 @@
 ﻿[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SqlWmiManagement')| Out-Null
 
 function Set-SQLStartupParameters{
+    [cmdletbinding(SupportsShouldProcess=$true)]
     param([string[]] $Instance
         ,[string[]] $StartupParameters
     )
@@ -19,6 +20,9 @@ function Set-SQLStartupParameters{
         $smowmi = New-Object Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer $HostName
         $wmisvc = $smowmi.Services | Where-Object {$_.Name -eq $ServiceName}
 
+        Write-Verbose "Old Parameters for $i :"
+        Write-Verbose $wmisvc.StartupParameters
+
         $oldparams = $wmisvc.StartupParameters -split ';'
         $newparams = @()
         foreach($param in $StartupParameters){
@@ -33,11 +37,17 @@ function Set-SQLStartupParameters{
         }
 
         $newparams += $oldparams | Where-Object {$_.Substring(0,2) -match '-d|-e|-l'}
-        $wmisvc.StartupParameters = ($newparams | Sort-Object) -join ';'
-        $wmisvc.Alter()
-        
-        Write-Warning "Startup Parameters for $i updated. You will need to restart the service for these changes to take effect."
-        If($SystemPaths){Write-Warning "You have changed the system paths for $i. Please make sure the paths are valid before restarting the service"}
+        $paramstring = ($newparams | Sort-Object) -join ';'
 
+        Write-Verbose "New Parameters for $i :"
+        Write-Verbose $paramstring
+
+        if($PSCmdlet.ShouldProcess($i,$paramstring)){
+            $wmisvc.StartupParameters = $paramstring
+            $wmisvc.Alter()
+
+            Write-Warning "Startup Parameters for $i updated. You will need to restart the service for these changes to take effect."
+            If($SystemPaths){Write-Warning "You have changed the system paths for $i. Please make sure the paths are valid before restarting the service"}
+        }
     }
 }

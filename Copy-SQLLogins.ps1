@@ -100,4 +100,4 @@ function Convert-SQLHashToString{
   $binhash | ForEach-Object {$outstring += ('{0:X}' -f $_).PadLeft(2, '0')}
   
   return $outstring
-}#Convert-SQLHashToString
+}#Convert-SQLHashToString 

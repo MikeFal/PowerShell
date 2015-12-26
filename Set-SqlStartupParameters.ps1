@@ -23,6 +23,7 @@ function Set-SQLStartupParameters{
         Write-Verbose "Old Parameters for $i :"
         Write-Verbose $wmisvc.StartupParameters
 
+        #Wrangle updated params with existing startup params (-d,-e,-l)
         $oldparams = $wmisvc.StartupParameters -split ';'
         $newparams = @()
         foreach($param in $StartupParameters){
@@ -42,6 +43,7 @@ function Set-SQLStartupParameters{
         Write-Verbose "New Parameters for $i :"
         Write-Verbose $paramstring
 
+        #If not -WhatIf, apply the change. Otherwise display an informational message.
         if($PSCmdlet.ShouldProcess($i,$paramstring)){
             $wmisvc.StartupParameters = $paramstring
             $wmisvc.Alter()

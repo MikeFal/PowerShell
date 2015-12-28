@@ -1,4 +1,9 @@
-﻿configuration LabDC{
+﻿#Script Parameters
+param([string]$DName
+      ,[System.Management.Automation.PSCredential]$DCred
+     )
+
+configuration LabDC{
     param(
         [string[]] $ComputerName = 'localhost'
         ,[string] $NIC = 'Ethernet 2'
@@ -13,6 +18,7 @@
     Import-DscResource -Module xNetworking
     Import-DscResource -Module xDHCPServer
 
+    $SafePassword = $DomainCred.GetNetworkCredential().Password
 
     Node $ComputerName{
         xIPAddress SetIP
@@ -71,5 +77,23 @@
     }
 }
 
+If(!(Test-Path 'C:\Temp')){New-Item -ItemType Directory 'C:\Temp'}
+Set-Location 'C:\Temp'
 
+$config = @{
+    AllNodes = @(
+        @{
+            NodeName = 'localhost'
+            PSDscAllowPlainTextPassword = $true
+            PSDscAllowDomainUser = $true
+            RebootNodeIfNeeded = $true
+        }
+    )
+}
 
+$NICInterface = (Get-netadapter -interfaceindex (gwmi Win32_NetworkAdapterConfiguration | Where-Object {$_.DNSdomain -ne 'mshome.net' -and $_.description -like '*Hyper-V*'}).Interfaceindex).Name
+if(Test-Path .\LabDC){Remove-Item -Recurse .\LabDC}
+labdc -ComputerName 'localhost' -DomainName $DName -DomainCred $DCred -NIC $NICInterface -ConfigurationData $config
+
+Set-DscLocalConfigurationManager -Path .\LabDC -Verbose
+Start-DscConfiguration -Path .\LabDC -Verbose -Force -Wait

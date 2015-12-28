@@ -1,4 +1,9 @@
-﻿configuration LabDC_DHCP{
+﻿#Script Parameters
+param([string]$DName
+    )
+
+
+configuration LabDC_DHCP{
     param(
         [string[]] $ComputerName = 'localhost'
         ,[string] $DomainName
@@ -30,8 +35,11 @@
 
 }
 
+If(!(Test-Path 'C:\Temp')){New-Item -ItemType Directory 'C:\Temp'}
+Set-Location 'C:\Temp'
+
 $config = @{AllNodes = @(@{NodeName = 'localhost';PSDscAllowPlainTextPassword = $true})}
 
-LabDC_DHCP -DomainName 'deathstar.local' -ConfigurationData $config
+LabDC_DHCP -DomainName $DName -ConfigurationData $config
 
 Start-DscConfiguration -Path .\LabDC_DHCP -Verbose -Force -Wait -debug

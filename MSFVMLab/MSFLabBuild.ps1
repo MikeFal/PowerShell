@@ -1,37 +1,9 @@
 ﻿#dot source Lab VM Functions
 . C:\git-repositories\PowerShell\MSFVMLab\New-LabVM.ps1
-. C:\git-repositories\PowerShell\Convert-WindowsImage.ps1
 
 #Create VM Switches
 If(!(Get-VMSwitch 'HostNetwork' -ErrorAction SilentlyContinue)){New-VMSwitch -Name 'HostNetwork' -SwitchType Internal}
 If(!(Get-VMSwitch 'LabNetwork' -ErrorAction SilentlyContinue)){New-VMSwitch -Name 'LabNetwork' -SwitchType Private}
-
-$Server2016path = 'F:\VMs\ISOs\en_windows_server_2016_technical_preview_4_x64_dvd_7258292.iso'
-$Server2012path = 'F:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso'
-
-#Create GM image
-if(Test-Path F:\VMs\ISOs\GM2016Tp3Core.vhdx){Remove-Item F:\VMs\ISOs\GM2016Core.vhdx}
-Convert-WindowsImage -SourcePath $Server2016path -VHDPath F:\VMs\ISOs\GM2016Core.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenterCore -VHDPartitionStyle MBR -UnattendPath F:\VMs\ISOs\unattend.xml
-
-if(Test-Path F:\VMs\ISOs\GM2016Tp3Full.vhdx){Remove-Item F:\VMs\ISOs\GM2016Full.vhdx}
-Convert-WindowsImage -SourcePath $Server2016path -VHDPath F:\VMs\ISOs\GM2016Full.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenter -VHDPartitionStyle MBR -UnattendPath F:\VMs\ISOs\unattend.xml
-
-
-if(Test-Path F:\VMs\ISOs\GM2012R2Core.vhdx){Remove-Item F:\VMs\ISOs\GM2012R2Core.vhdx}
-Convert-WindowsImage -SourcePath $Server2016path -VHDPath F:\VMs\ISOs\GM2012R2Core.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenterCore -VHDPartitionStyle MBR -UnattendPath F:\VMs\ISOs\unattend.xml
-
-if(Test-Path F:\VMs\ISOs\GM2012R2Full.vhdx){Remove-Item F:\VMs\ISOs\GM2012R2Full.vhdx}
-Convert-WindowsImage -SourcePath $Server2016path -VHDPath F:\VMs\ISOs\GM2012R2Full.vhdx -VHDFormat VHDX -VHDType Dynamic -Edition ServerDatacenter -VHDPartitionStyle MBR -UnattendPath F:\VMs\ISOs\unattend.xml
-
-$images = @('GM2016Core.vhdx','GM2016Full.vhdx')
-
-#add custom Powershell
-foreach($img in $images){
-    $DriveLetter = (Mount-VHD F:\VMs\ISOs\$img –PassThru | Get-Disk | Get-Partition | Get-Volume).DriveLetter
-    Copy-Item -Path C:\git-repositories\PowerShell\cSQLResources -Destination "$DriveLetter`:\Program Files\WindowsPowershell\Modules" -Recurse 
-    Copy-Item -Path C:\git-repositories\PowerShell\SqlConfiguration -Destination "$DriveLetter`:\Program Files\WindowsPowershell\Modules" -Recurse 
-    Dismount-VHD -Path F:\VMs\ISOs\$img
-}
 
 $Servers = @()
 $Servers += New-Object psobject -Property @{Name='PIKE';Type='Full';Class='DomainController'}

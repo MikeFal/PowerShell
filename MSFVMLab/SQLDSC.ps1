@@ -91,11 +91,18 @@ Configuration SQLServer{
       }
 }
 
-$config = @{AllNodes = @(@{
-                        NodeName = 'PICARD';
-                        PSDscAllowPlainTextPassword = $true;
-                        PSDscAllowDomainUser = $true;
-                        })}
+$config = @{
+    AllNodes = @(
+        foreach ($sqlNode in $SqlNodes)
+        {
+            @{ 
+                NodeName = $sqlNode;
+                PsDscAllowPlainTextPassword = $true;
+                PSDscAllowDomainUser = $true;
+               }
+        }
+    )
+}
 
 If(!(Test-Path 'C:\Temp')){New-Item -ItemType Directory 'C:\Temp'}
 Set-Location 'C:\Temp'

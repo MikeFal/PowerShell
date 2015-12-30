@@ -108,7 +108,7 @@ If(!(Test-Path 'C:\Temp')){New-Item -ItemType Directory 'C:\Temp'}
 Set-Location 'C:\Temp'
 if(Test-Path .\SQLServer){Remove-Item -Recurse .\SQLServer}
 
-SqlServer -ComputerName 'PICARD' -SqlSetupCred $SetupCredential -SqlSvc $SqlSvcAccount -AgtSvc $AgtSvcAccount -SqlAdmins $SqlAdmins -ConfigurationData $config
+SqlServer -ComputerName $SqlNodes -SqlSetupCred $SetupCredential -SqlSvc $SqlSvcAccount -AgtSvc $AgtSvcAccount -SqlAdmins $SqlAdmins -ConfigurationData $config
 
 Set-DscLocalConfigurationManager -Path .\SQLServer -Verbose
 Start-DscConfiguration -Path .\SQLServer -Verbose -Force -Wait

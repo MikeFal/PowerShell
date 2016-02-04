@@ -1,5 +1,5 @@
-﻿#dot source Lab VM Functions
-. C:\git-repositories\PowerShell\MSFVMLab\New-LabVM.ps1
+﻿#Load MSFVMLab module
+Import-Module C:\git-repositories\PowerShell\MSFVMLab\MSFVMLab.psm1 -Force
 
 #Create VM Switches
 If(!(Get-VMSwitch 'HostNetwork' -ErrorAction SilentlyContinue)){New-VMSwitch -Name 'HostNetwork' -SwitchType Internal}
@@ -21,15 +21,15 @@ foreach($Server in $Servers){
 if(!(Get-VM -Name $Server.name -ErrorAction SilentlyContinue)){
 
     $img=switch($Server.Type){
-        'Full'{'F:\VMs\ISOs\GM2016Full.vhdx'}
-        default{'F:\VMs\ISOs\GM2016Core.vhdx'}
+        'Full'{'C:\VMs\ISOs\GM2012R2Full.vhdx'}
+        default{'C:\VMs\ISOs\GM2012R2Core.vhdx'}
     }
      
     New-LabVM -VMName $Server.name `
         -LocalCred $LocalAdminCred `
-        -VMPath 'F:\VMs\Machines' `
-        -VHDPath 'F:\VMs\VHDs' `
-        -ISOs @('F:\VMs\ISOs\en_windows_server_2016_technical_preview_4_x64_dvd_7258292.iso','F:\VMs\ISOs\en_sql_server_2016_ctp3.2_x64_dvd_8169194.iso') `
+        -VMPath 'C:\VMs\Machines' `
+        -VHDPath 'C:\VMs\VHDs' `
+        -ISOs @('C:\VMs\ISOs\en_windows_server_2012_r2_with_update_x64_dvd_6052708.iso','C:\VMs\ISOs\en_sql_server_2014_developer_edition_x64_dvd_3940406.iso') `
         -VMSource $img `
         -VMSwitches @('HostNetwork','LabNetwork') `
         -Verbose
@@ -45,7 +45,7 @@ foreach($Server in $Servers){
     Get-VM -Name $VMName | Get-VMIntegrationService | Where-Object {!($_.Enabled)} | Enable-VMIntegrationService -Verbose
 
     #load dependencies
-    Invoke-Command -VMName $VMName {Get-PackageProvider -Name NuGet -ForceBootstrap; Install-Module @('xComputerManagement','xActiveDirectory','xNetworking','xDHCPServer','xSqlServer') -Force} -Credential $DomainCred
+    #Invoke-Command -VMName $VMName {Get-PackageProvider -Name NuGet -ForceBootstrap; Install-Module @('xComputerManagement','xActiveDirectory','xNetworking','xDHCPServer','xSqlServer') -Force} -Credential $DomainCred
     <#
     if($Server.Type -eq 'Core'){
         #If Core, set default shell to Powershell

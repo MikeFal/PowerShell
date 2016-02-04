@@ -77,7 +77,7 @@ Configuration SQLServer{
             SetupCredential = $SqlSetupCred
             Features = 'SQLEngine,FullText'
             InstanceName = 'MSSQLSERVER'
-            UpdateEnabled = 0
+            UpdateEnabled = '0'
             UpdateSource = 'MU'
             SqlSvcAccount = $Node.SqlSvcAccount
             AgtSvcAccount = $Node.AgtSvcAccount

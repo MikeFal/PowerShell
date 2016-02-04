@@ -1,13 +1,30 @@
 ﻿function New-LabVM{
-    param([string]$VMName
-        ,[string]$VMPath
-        ,[string]$VHDPath
-        ,[string[]]$VMSwitches
+    [cmdletbinding()]
+    param([string][Parameter(Mandatory=$true)]$VMName
+        ,[string][Parameter(Mandatory=$true)]$VMPath
+        ,[string][Parameter(Mandatory=$true)]$VHDPath
+        ,[string[]][Parameter(Mandatory=$true)]$VMSwitches
         ,[string[]]$ISOs
         ,[string]$VMSource
-        ,[Parameter(Mandatory=$true)][System.Management.Automation.PSCredential]$LocalCred
         )
+
+    #Validate session has admin level rights
     try{
+            If(!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
+                throw 'Function needs to run from an elevated session'
+        }
+
+        #Validate inputs
+        if(!(Test-Path $VHDPath)){throw "Invalid value for `$VHDPath($VHDPath)."}
+        if(!(Test-Path $VMPath)){throw "Invalid value for `$VHDPath($VHDPath)."}
+        if($VMSwitches){
+            $VMSwitches | ForEach-Object{If(!(Get-VMSwitch -Name $_ -ErrorAction SilentlyContinue)){throw "Invalid Virtual Switch $_"}}
+        }
+
+        if($ISOs){
+            $ISOs | ForEach-Object{If(!(Get-VMSwitch -Name $_ -ErrorAction SilentlyContinue)){throw "Invalid ISO $_"}}
+        }
+    
         $VHDFile = Join-Path -Path $VHDPath -ChildPath "$VMName.vhdx"
         $VMFile = Join-Path -Path $VMPath -ChildPath "$VMName.vhdx"
 
@@ -31,6 +48,7 @@
         Set-VMBios -VMName $VMName -StartupOrder $StartOrder
         Add-VMHardDiskDrive -VMName $VMName -Path $VHDFile  -ControllerNumber 0 -ControllerLocation 0
         foreach($VMSwitch in $VMSwitches){
+             
             if($VMSwitch -eq $VMSwitches[0]){
                 Rename-VMNetworkAdapter -VMName $VMName -Name 'Network Adapter' -NewName $VMSwitch
             }

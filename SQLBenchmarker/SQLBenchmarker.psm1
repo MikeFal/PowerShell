@@ -29,11 +29,20 @@ function Get-SQLStatistics{
         $Samples = [Math]::Ceiling($DurationSec/5)
         $output = New-Object System.Object
         if($smo.InstanceName -gt 0){
-            $Counters = @('\MSSQL`$'+$smo.InstanceName+':SQL Statistics\Batch Requests/sec','\MSSQL`$'+$smo.InstanceName+':General Statistics\User Connections')
+            $CounterName = '\MSSQL$'+$smo.InstanceName
         }
         else{
-            $Counters = @('\SQLServer:SQL Statistics\Batch Requests/sec','\SQLServer:General Statistics\User Connections')
+            $CounterName = '\SQLServer'
         }
+
+        $Counters = @("$CounterName`:SQL Statistics\Batch Requests/sec",`
+                      "$CounterName`:General Statistics\User Connections",`
+                      "$CounterName`:Access Methods\Forwarded Records/sec",`
+                      "$CounterName`:Access Methods\Full Scans/sec",`
+                      "$CounterName`::Access Methods\Page Splits/sec",`
+                      "$CounterName`:SQL Statistics\Batch Requests/sec",`
+                      "$CounterName`:SQL Statistics\SQL Compilations/sec",`
+                      "$CounterName`:SQL Statistics\SQL Re-Compilations/sec")
 
 		if($ComputerName -eq $env:COMPUTERNAME){
 			$Txns = Get-Counter -Counter $Counters -SampleInterval 5 -MaxSamples $samples
@@ -76,7 +85,11 @@ function Get-SQLMemoryStats{
             $CounterName = '\SQLServer'
         }
 
-		$Counters = $Counters = @("$CounterName`:Buffer Manager\Page Life Expectancy","$CounterName`:Buffer Manager\Buffer cache hit ratio","$CounterName`:Memory Manager\Total Server Memory (KB)","\Memory\Available MBytes")
+		$Counters = $Counters = @("$CounterName`:Buffer Manager\Page Life Expectancy",`
+                                  "$CounterName`:Buffer Manager\Buffer cache hit ratio",`
+                                  "$CounterName`:Memory Manager\Total Server Memory (KB)",`
+                                  "$CounterName`:Memory Manager\Memory Grants Pending",
+                                  "\Memory\Available MBytes")
 
 		if($ComputerName -eq $env:COMPUTERNAME){
 			$MemStats = Get-Counter -Counter $Counters -SampleInterval 5 -MaxSamples ([Math]::Ceiling($DurationSec/5))
@@ -93,6 +106,7 @@ function Get-SQLMemoryStats{
 			$BHR = $MemStats.CounterSamples | where {$_.path -like '*Buffer cache hit ratio'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
 			$ServerMemory = $MemStats.CounterSamples | where {$_.path -like '*Total Server Memory (KB)'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
 			$MBytes = $MemStats.CounterSamples | where {$_.path -like '*Available MBytes'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
+            $MemGrants = $MemStats.CounterSamples | where {$_.path -like '*Memory Grants Pending'} | Measure-Object -Property CookedValue -Average -Minimum -Maximum
 
 			$output = New-Object System.Object
 			#$output | Add-Member -type NoteProperty -name InstanceName -Value $InstanceName
@@ -109,6 +123,9 @@ function Get-SQLMemoryStats{
 			$output | Add-Member -type NoteProperty -name AvgAvailableMBytes -Value ("{0:N2}" -f $MBytes.Average)
 			$output | Add-Member -type NoteProperty -name MinAvailableMBytes -Value ("{0:N2}" -f $MBytes.Minimum)
 			$output | Add-Member -type NoteProperty -name MaxAvailableMBytes -Value ("{0:N2}" -f $MBytes.Maximum)
+            $output | Add-Member -type NoteProperty -name AvgMemGrants -Value ("{0:N2}" -f $MemGrants.Average)
+			$output | Add-Member -type NoteProperty -name MinMemGrants -Value ("{0:N2}" -f $MemGrants.Minimum)
+			$output | Add-Member -type NoteProperty -name MaxMemGrants -Value ("{0:N2}" -f $MemGrants.Maximum)
 
 	        return $output
 		}
@@ -309,4 +326,12 @@ param([string]$InstanceName='localhost'
 	$Waits | Receive-Job| Select-Object * -ExcludeProperty RunspaceId | Format-Table -AutoSize | Out-File $filename -Append
 
 	if($AutoOpen){notepad $filename}
+}
+
+function New-PerfMembers{
+    param([Microsoft.PowerShell.Commands.GetCounter.PerformanceCounterSample[]]$Samples,
+          [PSobject] $row)
+
+
+
 }

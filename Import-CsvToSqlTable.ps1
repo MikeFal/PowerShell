@@ -1,6 +1,6 @@
 ﻿function Import-CsvToSqTable {
 [CmdletBinding()]
-param([string]$SQLServerName
+param([string]$InstanceName
       ,[string]$Database
       ,[string]$SourceFile
       ,[string]$SqlDataType = 'VARCHAR(255)'
@@ -43,8 +43,8 @@ param([string]$SQLServerName
     Write-Verbose "[CREATE TABLE Statement] $sql"
     
     try{
-        Invoke-Sqlcmd -ServerInstance $SQLServerName -Database $Database -Query ($sql -join "`n")
-        $cmd = "bcp '$Database.dbo.[$StagingTableName]' in '$SourceFile' -S'$SQLServerName' -F2 -T -c -t','"
+        Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query ($sql -join "`n")
+        $cmd = "bcp '$Database.dbo.[$StagingTableName]' in '$SourceFile' -S'$InstanceName' -F2 -T -c -t','"
         Write-Verbose "[BCP Command] $cmd"
     
         $cmdout = Invoke-Expression $cmd
@@ -53,9 +53,9 @@ param([string]$SQLServerName
         }
         Write-Verbose "[BCP Results] $cmdout"
 
-        $rowcount = Invoke-Sqlcmd -ServerInstance $SQLServerName -Database $Database -Query "SELECT COUNT(1) [RowCount] FROM [$StagingTableName];"
+        $rowcount = Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query "SELECT COUNT(1) [RowCount] FROM [$StagingTableName];"
 
-        $output = New-Object PSObject -Property @{'Instance'=$SQLServerName;'Database'=$Database;'Table'="$StagingTableName";'RowCount'=$rowcount.RowCount}
+        $output = New-Object PSObject -Property @{'Instance'=$InstanceName;'Database'=$Database;'Table'="$StagingTableName";'RowCount'=$rowcount.RowCount}
 
         return $output
     }

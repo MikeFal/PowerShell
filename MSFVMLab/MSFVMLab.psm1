@@ -136,7 +136,7 @@ param([string][Parameter(Mandatory=$true)]$VMName
     )
 
     
-    try{
+    #try{
         #Validate session has admin level rights
         If(!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
                 throw 'Function needs to run from an elevated session'
@@ -150,7 +150,7 @@ param([string][Parameter(Mandatory=$true)]$VMName
         }
 
         if($ISOs){
-            $ISOs | ForEach-Object{If(!(Get-VMSwitch -Name $_ -ErrorAction SilentlyContinue)){throw "Invalid ISO $_"}}
+            $ISOs | ForEach-Object{If(!(Test-Path $_)){throw "Invalid ISO $_"}}
         }
     
         $VHDFile = Join-Path -Path $VHDPath -ChildPath "$VMName.vhdx"
@@ -200,11 +200,11 @@ param([string][Parameter(Mandatory=$true)]$VMName
         
         Write-Verbose "[$(Get-Date -Format 'HH:mm:ss')]$VMName complete."
         return $NewVM
-    }
-    catch{
-        Write-Error $Error[0]
-        return
-    }
+    #}
+    #catch{
+    #    Write-Error $Error[0]
+    #    return
+    #}
 }
 
 function Remove-LabVM{

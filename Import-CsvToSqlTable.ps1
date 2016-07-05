@@ -4,6 +4,7 @@ param([string]$InstanceName
       ,[string]$Database
       ,[string]$SourceFile
       ,[string]$SqlDataType = 'VARCHAR(255)'
+      ,[pscredential]$SqlCred
       ,[string]$StagingTableName
       ,[Switch]$Append
       )
@@ -40,11 +41,18 @@ param([string]$InstanceName
     $sql += ("CREATE TABLE [$StagingTableName]($($CleanHeader[0]) $SqlDataType `n")
     $CleanHeader[1..$CleanHeader.Length] | ForEach-Object {$sql += ",$_ $SqlDataType `n"}
     $sql += ");"
+    $sql = $sql -join "`n"
     Write-Verbose "[CREATE TABLE Statement] $sql"
     
+
     try{
-        Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query ($sql -join "`n")
-        $cmd = "bcp '$Database.dbo.[$StagingTableName]' in '$SourceFile' -S'$InstanceName' -F2 -T -c -t','"
+        if($SqlCred){
+            Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query $sql -Username $SqlCred.UserName -Password $SqlCred.GetNetworkCredential().Password
+            $cmd = "bcp 'dbo.$StagingTableName' in '$SourceFile' -S'$InstanceName' -d'$Database' -F2 -c -t',' -U'$($SqlCred.UserName)' -P'$($SqlCred.GetNetworkCredential().Password)'"
+        } else {
+            Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query $sql
+            $cmd = "bcp 'dbo.$StagingTableName' in '$SourceFile' -S'$InstanceName' -d'$Database' -F2 -c -t',' -T"
+        }
         Write-Verbose "[BCP Command] $cmd"
     
         $cmdout = Invoke-Expression $cmd
@@ -52,9 +60,11 @@ param([string]$InstanceName
             throw $cmdout
         }
         Write-Verbose "[BCP Results] $cmdout"
-
-        $rowcount = Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query "SELECT COUNT(1) [RowCount] FROM [$StagingTableName];"
-
+        if($SqlCred){
+            $rowcount = Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query "SELECT COUNT(1) [RowCount] FROM [$StagingTableName];" -Username $SqlCred.UserName -Password $SqlCred.GetNetworkCredential().Password
+        } else {
+            $rowcount = Invoke-Sqlcmd -ServerInstance $InstanceName -Database $Database -Query "SELECT COUNT(1) [RowCount] FROM [$StagingTableName];"
+        }
         $output = New-Object PSObject -Property @{'Instance'=$InstanceName;'Database'=$Database;'Table'="$StagingTableName";'RowCount'=$rowcount.RowCount}
 
         return $output

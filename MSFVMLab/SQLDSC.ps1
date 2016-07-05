@@ -1,10 +1,5 @@
 ﻿#Script Parameters
-param([string[]]$SqlNodes
-     ,[PSCredential]$SetupCredential
-     ,[PSCredential]$SqlSvcAccount
-     ,[PSCredential]$AgtSvcAccount
-     ,[string[]]$SqlAdmins)
-
+param([string[]]$SqlNodes)
 
 Configuration SQLServer{
     param([string[]] $ComputerName
@@ -38,12 +33,12 @@ Configuration SQLServer{
             Ensure = 'Present'
         }
 
-        WindowsFeature NETCore{
-            Name = 'NET-Framework-Core'
-            Ensure = 'Present'
-            IncludeAllSubFeature = $true
-            Source = 'D:\sources\sxs'
-        }
+       #WindowsFeature NETCore{
+       #    Name = 'NET-Framework-Core'
+       #    Ensure = 'Present'
+       #    IncludeAllSubFeature = $true
+       #    Source = 'D:\sources\sxs'
+       #}
 
         WindowsFeature FC{
            Name = 'Failover-Clustering'
@@ -71,23 +66,6 @@ Configuration SQLServer{
             Protocol = 'TCP'
         }
         
-        xSQLServerSetup SQLInstall{
-            SourcePath = 'E:\'
-            SourceFolder = ''
-            SetupCredential = $SqlSetupCred
-            Features = 'SQLEngine,FullText'
-            InstanceName = 'MSSQLSERVER'
-            UpdateEnabled = '0'
-            UpdateSource = 'MU'
-            SqlSvcAccount = $Node.SqlSvcAccount
-            AgtSvcAccount = $Node.AgtSvcAccount
-            SqlSysAdminAccounts = $Node.SqlAdminAccounts
-            SQLUserDBDir = 'C:\DBFiles\Data'
-            SQLUserDBLogDir = 'C:\DBFiles\Log'
-            SQLTempDBDir = 'C:\DBFiles\TempDB'
-            SQLTempDBLogDir = 'C:\DBFiles\TempDB'
-            DependsOn = @("[File]DataDir","[File]LogDir","[File]TempDBDir","[WindowsFeature]NETCore")
-        }
       }
 }
 

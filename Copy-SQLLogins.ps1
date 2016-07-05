@@ -26,13 +26,11 @@ function Copy-SqlLogins{
 #>
   [cmdletbinding()]
   param([parameter(Mandatory=$true)][string] $source
-    ,[string] $target
+    ,[string] $ApplyTo
     ,[string[]] $logins
-    ,[Switch] $Script
   )
   #create SMO objects for actions
-  $smosource = new-object ('Microsoft.SqlServer.Management.Smo.Server') $source
-  $smotarget = new-object ('Microsoft.SqlServer.Management.Smo.Server') $target 	
+  $smosource = new-object ('Microsoft.SqlServer.Management.Smo.Server') $source 	
   
   #Scripting options
   $so = new-object microsoft.sqlserver.management.smo.scriptingoptions
@@ -71,25 +69,20 @@ function Copy-SqlLogins{
     $outscript += '/****************************************************'
     $outscript += "Login script for $($login.Name)"
     $outscript += '****************************************************/'
-    $outscript += "IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = '$($login.Name)')"
-    $outscript += 'BEGIN'
+    $outscript += "IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = '$($login.Name)')"
+    $outscript += "DROP LOGIN [$($login.Name)];"
     $outscript += "$lscript;"
-    $outscript += 'END'
   }
 
   #Clean up formating
   $outscript = $outscript.Replace('WITH',"`nWITH`n`t").Replace(',',"`n`t,")
 
-  if($Script){
+  if($ApplyTo.Length -eq 0){
     return $outscript
-  }
-  else{
-    if($target.Length -eq 0){
-        Write-Warning 'No target declared. Copy action halted'
-    }
-    else{
-        $smotarget.Databases['tempdb'].ExecuteNonQuery($outscript)
-    }
+  }else{
+    $smotarget = new-object ('Microsoft.SqlServer.Management.Smo.Server') $ApplyTo
+    $smotarget.Databases['tempdb'].ExecuteNonQuery($outscript -join "`n")
+    #Invoke-Sqlcmd -ServerInstance $ApplyTo -Database tempdb -Query $outscript
   }
 }
 

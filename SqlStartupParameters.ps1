@@ -40,6 +40,7 @@
             $newparams = @()
             foreach($param in $StartupParameters){
                 if($param.Substring(0,2) -match '-d|-e|-l'){
+                    $checkpath = 
                     $SystemPaths = $true
                     $newparams += $param
                     $oldparams = $oldparams | Where-Object {$_.Substring(0,2) -ne $param.Substring(0,2)}
@@ -68,7 +69,7 @@
 }
 
 function Get-SqlStartupParameters{
-    [cmdletbinding(SupportsShouldProcess=$true)]
+    [cmdletbinding()]
     param([parameter(ValueFromPipeline,Mandatory=$true)][string[]] $ServerInstance
     )
     BEGIN{

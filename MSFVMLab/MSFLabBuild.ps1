@@ -21,14 +21,14 @@ foreach($Server in $Servers){
 if(!(Get-VM -Name $Server.name -ErrorAction SilentlyContinue)){
 
     $img=switch($Server.Type){
-        'Full'{'C:\VMs\ISOs\GM2016TP5Full.vhdx'}
-        default{'C:\VMs\ISOs\GM2016TP5Core.vhdx'}
+        'Full'{'C:\VMs\ISOs\GM2016Full.vhdx'}
+        default{'C:\VMs\ISOs\GM2016Core.vhdx'}
     }
      $server.Name
     New-LabVM -VMName $Server.name `
         -VMPath 'C:\VMs\Machines' `
         -VHDPath 'C:\VMs\VHDs' `
-        -ISOs @('C:\VMs\ISOs\14300.1000.160324-1723.RS1_RELEASE_SVC_SERVER_OEMRET_X64FRE_EN-US.ISO','C:\VMs\ISOs\en_sql_server_2016_developer_x64_dvd_8777069.iso') `
+        -ISOs @('C:\VMs\ISOs\en_windows_server_2016_x64_dvd_9327751.ISO','C:\VMs\ISOs\en_sql_server_2016_developer_x64_dvd_8777069.iso') `
         -VMSource $img `
         -VMSwitches @('HostNetwork','LabNetwork') `
         -Verbose

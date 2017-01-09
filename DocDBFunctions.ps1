@@ -138,6 +138,7 @@ function Remove-DocDBCollection{
     return $response
 }
 
+#DocDB Document Functions (Get/New/Remove)
 function Get-DocDBDocument{
     param([string] $rooturi
           ,[string] $key
@@ -198,6 +199,7 @@ function Remove-DocDBDocuments{
     return $response
 }
 
+#WIP for adding stored procedure. Currently not working
 function Add-DocDBStoredProcedure{
     param([string] $rooturi
           ,[string] $key
@@ -214,6 +216,7 @@ function Add-DocDBStoredProcedure{
     return $response
 }
 
+#Invoke functions
 function Invoke-DocDbQuery{
     param([string]$query
           ,[string] $rooturi

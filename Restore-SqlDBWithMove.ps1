@@ -32,9 +32,9 @@ $dbfiles = Invoke-Sqlcmd -ServerInstance localhost -Database tempdb -Query "REST
 foreach($dbfile in $dbfiles){
     $DbFileName = $dbfile.PhysicalName | Split-Path -Leaf
     if($dbfile.Type -eq 'L'){
-        $newfile = Join-Path -Path $NewDataPath -ChildPath $DbFileName
+        $newfile = Join-Path -Path $NewLogPath -ChildPath $DbFileName
     } else {
-        $newfile = Join-Path -Path $NewLogPath -ChildPath  $DbFileName
+        $newfile = Join-Path -Path $NewDataPath -ChildPath  $DbFileName
     }
     $relocate += New-Object Microsoft.SqlServer.Management.Smo.RelocateFile ($dbfile.LogicalName,$newfile)
 }

@@ -1,21 +1,23 @@
 ﻿#Load MSFVMLab module
 Import-Module C:\git-repositories\PowerShell\MSFVMLab\MSFVMLab.psm1 -Force
 
+$LabConfig = Get-Content C:\git-repositories\PowerShell\MSFVMLab\LabVMS.json | ConvertFrom-Json
+$Servers = $LabConfig.Servers
+$Domain = $LabConfig.Domain
+
 #Create VM Switches
-If(!(Get-VMSwitch 'HostNetwork' -ErrorAction SilentlyContinue)){New-VMSwitch -Name 'HostNetwork' -SwitchType Internal}
-If(!(Get-VMSwitch 'LabNetwork' -ErrorAction SilentlyContinue)){New-VMSwitch -Name 'LabNetwork' -SwitchType Private}
+foreach($network in $LabConfig.Switches){
+    If(!(Get-VMSwitch $network.Name -ErrorAction SilentlyContinue)){
+            New-VMSwitch -Name $network.Name -SwitchType $network.Type
+        }
+}
 
-$Servers = @()
-$Servers += New-Object psobject -Property @{Name='PIKE';Type='Full';Class='DomainController'}
-$Servers += New-Object psobject -Property @{Name='PICARD';Type='Core';Class='SQLServer'}
-$Servers += New-Object psobject -Property @{Name='RIKER';Type='Core';Class='SQLServer'}
-
-$Domain = 'STARFLEET'
-#create VM
+#Set creds
 $LocalAdminCred = Get-Credential -Message 'Local Adminstrator Credential' -UserName 'localhost\administrator'
 $DomainCred = Get-Credential -Message 'Domain Credential' -UserName "$domain\administrator"
 $sqlsvccred = Get-Credential -Message 'Please enter the SQL Server Service credential' -UserName "$domain\sqlsvc"
 
+#create VMs
 foreach($Server in $Servers){
 
 if(!(Get-VM -Name $Server.name -ErrorAction SilentlyContinue)){
@@ -44,7 +46,7 @@ foreach($Server in $Servers){
     Get-VM -Name $VMName | Get-VMIntegrationService | Where-Object {!($_.Enabled)} | Enable-VMIntegrationService -Verbose
 
     #load dependencies
-    Invoke-Command -VMName $VMName {Get-PackageProvider -Name NuGet -ForceBootstrap; Install-Module @('xComputerManagement','xActiveDirectory','xNetworking','xDHCPServer','xSqlServer') -Force} -Credential $LocalAdminCred
+    Invoke-Command -VMName $VMName {Get-PackageProvider -Name NuGet -ForceBootstrap; Install-Module @('xComputerManagement','xActiveDirectory','xNetworking','xDHCPServer','xSqlServer','SqlServer') -Force} -Credential $LocalAdminCred
     
    if($Server.Type -eq 'Core'){
         #If Core, set default shell to Powershell
@@ -64,7 +66,7 @@ Copy-VMFile -Name $dc -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\VMDSC
 Copy-VMFile -Name $dc -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\VMDSC_DHCP.ps1' -DestinationPath 'C:\Temp\VMDSC_DHCP.ps1' -CreateFullPath -FileSource Host -Force
 Copy-VMFile -Name $dc -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\SQLDSC.ps1' -DestinationPath 'C:\Temp\SQLDSC.ps1' -CreateFullPath -FileSource Host -Force
 
-Invoke-Command -VMName $dc -ScriptBlock {. C:\Temp\VMDSC.ps1 -DName 'starfleet.com' -DCred $using:DomainCred} -Credential $LocalAdminCred
+Invoke-Command -VMName $dc -ScriptBlock {. C:\Temp\VMDSC.ps1 -DName "$using:Domain.com" -DCred $using:DomainCred} -Credential $LocalAdminCred
 
 #Restart DC to complete
 Stop-VM $dc
@@ -79,7 +81,7 @@ Invoke-Command -VMName $dc -ScriptBlock {. C:\Temp\VMDSC_DHCP.ps1 -DName 'starfl
 foreach($Server in $($Servers | Where-Object {$_.Class -ne 'DomainController'})){ 
 #Set DNS
 Invoke-Command -VMName $Server.Name { ipconfig /release ; ipconfig /renew ; $idx = (Get-NetIPAddress | Where-Object {$_.IPAddress -like '10*'}).InterfaceIndex; Set-DnsClientServerAddress -InterfaceIndex $idx -ServerAddresses '10.10.10.1'} -Credential $LocalAdminCred
-    Invoke-Command -VMName $Server.Name -Credential $LocalAdminCred -ScriptBlock {Add-Computer -DomainName 'starfleet.com' -Credential $using:DomainCred -Restart}
+    Invoke-Command -VMName $Server.Name -Credential $LocalAdminCred -ScriptBlock {Add-Computer -DomainName "$using:Domain.com" -Credential $using:DomainCred -Restart}
 }
 
 

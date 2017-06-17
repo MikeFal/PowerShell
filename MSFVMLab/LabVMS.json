@@ -1,0 +1,30 @@
+{
+ "switches":[
+    {
+        "name":"HostNetwork"
+        ,"type":"Internal"
+    },
+    {
+        "name":"LabNetwork"
+        ,"type":"Private"
+    }
+
+ ],
+ "domain":"EMPIRE",
+ "servers":[
+    {
+        "name":"PALPATINE"
+        ,"type":"FULL"
+        ,"class":"DomainController"
+    },
+    {
+        "name":"VADER"
+        ,"type":"CORE"
+        ,"class":"SQLServer"
+    },
+    {
+        "name":"TARKIN"
+        ,"type":"CORE"
+        ,"class":"SQLServer"
+    }]
+}

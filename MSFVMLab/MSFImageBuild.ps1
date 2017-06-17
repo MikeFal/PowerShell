@@ -46,8 +46,8 @@ if($CustomModules -and (Test-Path $OutputFile)){
 }
 
 $custom = @('C:\git-repositories\PowerShell\SqlConfiguration')
-New-MSFLabImage -ISO 'C:\VMS\ISOs\en_windows_server_2016_x64_dvd_9327751.ISO' -OutputPath 'C:\VMS\ISOs' -ImageName 'GM2016Core.vhdx' -Edition ServerStandardCore -CustomModules $custom -Verbose -UnattendXML C:\vms\ISOs\unattend.xml
-New-MSFLabImage -ISO 'C:\VMS\ISOs\en_windows_server_2016_x64_dvd_9327751.ISO' -OutputPath 'C:\VMS\ISOs' -ImageName 'GM2016Full.vhdx' -Edition ServerStandard -CustomModules $custom -Verbose -UnattendXML C:\vms\ISOs\unattend.xml
+New-MSFLabImage -ISO 'C:\VMS\ISOs\en_windows_server_2016_x64_dvd_9327751.ISO' -OutputPath 'C:\VMS\ISOs' -ImageName 'GM2016Core.vhdx' -Edition ServerStandardCore -CustomModules $custom -Verbose -UnattendXML C:\vms\ISOs\SERVER2016.xml
+New-MSFLabImage -ISO 'C:\VMS\ISOs\en_windows_server_2016_x64_dvd_9327751.ISO' -OutputPath 'C:\VMS\ISOs' -ImageName 'GM2016Full.vhdx' -Edition ServerStandard -CustomModules $custom -Verbose -UnattendXML C:\vms\ISOs\SERVER2016.xml
 
 
 #$Server2016path = 'F:\VMs\ISOs\en_windows_server_2016_technical_preview_4_x64_dvd_7258292.iso'

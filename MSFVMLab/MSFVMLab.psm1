@@ -46,7 +46,7 @@ param([string][Parameter(Mandatory=$true)]$ISO
      ,[string]$UnattendXML
      ,[string[]]$CustomModules
 )
-$ErrorActionPreference = 'Stop'
+#$ErrorActionPreference = 'Stop'
 
 #Check for elevated rights
 If(!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
@@ -57,7 +57,7 @@ If(!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
 Write-Verbose "Validating Build Paths..."
 if(!(Test-Path $ISO)){Write-Error "ISO Path invalid: $ISO"}
 if(!(Test-Path $OutputPath)){Write-Error "ISO Path invalid: $OutputPath"}
-if($UnattendXML -ne $null -and (Test-Path $UnattendXML) -eq $false){Write-Error "UnattendXML Path invalid: $UnattendXML"}
+#if($UnattendXML -ne $null -and (Test-Path $UnattendXML) -eq $false){Write-Error "UnattendXML Path invalid: $UnattendXML"}
 
 $OutputFile = Join-Path -Path $OutputPath -ChildPath $ImageName
 
@@ -3603,7 +3603,7 @@ Process {
                     
                         $txtSourcePath.Text = $isoPath = (Resolve-Path $openFileDialog1.FileName).Path
                         Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
-                    
+                        
                         $openIso     = Mount-DiskImage -ImagePath $isoPath -StorageType ISO -PassThru
                         
                         # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
@@ -4238,14 +4238,12 @@ Process {
 
             $isoPath = (Resolve-Path $SourcePath).Path
 
-            Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
+            Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)...($isoPath)"
             $openIso     = Mount-DiskImage -ImagePath $isoPath -StorageType ISO -PassThru
             # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
-            $openIso     = Get-DiskImage -ImagePath $isoPath
+            #$openIso     = Get-DiskImage -ImagePath $isoPath
             $driveLetter = ($openIso | Get-Volume).DriveLetter
-
             $SourcePath  = "$($driveLetter):\sources\install.wim"
-
             # Check to see if there's a WIM file we can muck about with.
             Write-W2VInfo "Looking for $($SourcePath)..."
             if (!(Test-Path $SourcePath)) {

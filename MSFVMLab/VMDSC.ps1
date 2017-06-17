@@ -25,7 +25,7 @@ configuration LabDC{
         {
             IPAddress      = '10.10.10.1'
             InterfaceAlias = $NIC
-            SubnetMask     = 24
+            PrefixLength     = 24
             AddressFamily  = 'IPV4'
  
         }
@@ -91,7 +91,7 @@ $config = @{
     )
 }
 
-$NICInterface = (Get-netadapter -interfaceindex (gwmi Win32_NetworkAdapterConfiguration | Where-Object {$_.DNSdomain -ne 'mshome.net' -and $_.description -like '*Hyper-V*'}).Interfaceindex).Name
+$NICInterface = (Get-netadapter -interfaceindex (Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.DNSdomain -ne 'mshome.net' -and $_.description -like '*Hyper-V*'}).Interfaceindex).Name
 if(Test-Path .\LabDC){Remove-Item -Recurse .\LabDC}
 labdc -ComputerName 'localhost' -DomainName $DName -DomainCred $DCred -NIC $NICInterface -ConfigurationData $config
 

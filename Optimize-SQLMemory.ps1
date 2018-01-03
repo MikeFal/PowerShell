@@ -16,6 +16,7 @@
 #>
 
 param([parameter(Mandatory=$true)][string] $target
+ , [int]$MemGB
  , [Switch] $apply
  )
 
@@ -30,8 +31,13 @@ else{
  }
 
 #set memory variables
-$totalmem = (gwmi Win32_ComputerSystem -computername $sqlhost).TotalPhysicalMemory/1GB
-$sqlmem = [math]::floor($totalmem)
+if($MemGB){
+    $totalmem = $MemGB 
+    $sqlmem = [math]::floor($totalmem)
+} else {
+    $totalmem = (gwmi Win32_ComputerSystem -computername $sqlhost).TotalPhysicalMemory/1GB
+    $sqlmem = [math]::floor($totalmem)
+}
 
 #calculate memory
 while($totalmem -gt 0){

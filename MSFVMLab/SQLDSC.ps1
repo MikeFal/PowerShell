@@ -2,15 +2,10 @@
 param([string[]]$SqlNodes)
 
 Configuration SQLServer{
-    param([string[]] $ComputerName
-         ,[PSCredential]$SqlSetupCred
-         ,[PSCredential]$SqlSvc
-         ,[PSCredential]$AgtSvc
-         ,[string[]]$SqlAdmins)
+    param([string[]] $ComputerName)
 
     #Part of the Microsoft DSC Resource Kit
     Import-DscResource -Module xNetworking
-    Import-DscResource -Module xSqlServer
     Import-DscResource –ModuleName 'PSDesiredStateConfiguration'
 
     Node $ComputerName {
@@ -32,13 +27,6 @@ Configuration SQLServer{
             Type = 'Directory'
             Ensure = 'Present'
         }
-
-       #WindowsFeature NETCore{
-       #    Name = 'NET-Framework-Core'
-       #    Ensure = 'Present'
-       #    IncludeAllSubFeature = $true
-       #    Source = 'D:\sources\sxs'
-       #}
 
         WindowsFeature FC{
            Name = 'Failover-Clustering'
@@ -86,7 +74,6 @@ If(!(Test-Path 'C:\Temp')){New-Item -ItemType Directory 'C:\Temp'}
 Set-Location 'C:\Temp'
 if(Test-Path .\SQLServer){Remove-Item -Recurse .\SQLServer}
 
-SqlServer -ComputerName $SqlNodes -SqlSetupCred $SetupCredential -SqlSvc $SqlSvcAccount -AgtSvc $AgtSvcAccount -SqlAdmins $SqlAdmins -ConfigurationData $config
-
+SqlServer -ComputerName $SqlNodes 
 Set-DscLocalConfigurationManager -Path .\SQLServer -Verbose
 Start-DscConfiguration -Path .\SQLServer -Verbose -Force -Wait

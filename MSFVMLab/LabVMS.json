@@ -1,4 +1,5 @@
 {
+ "WorkingDirectory":"C:\\Temp",
  "switches":[
     {
         "name":"HostNetwork"

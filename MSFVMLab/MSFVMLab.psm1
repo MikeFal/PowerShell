@@ -220,32 +220,38 @@ all the associated files (such as vhds, vhdxs, and created folders).
 Name of VM to be removed.
 
 #>
-    param([string]$VMName)
+    param([string[]]$VMName)
 
-    $CurrVM = Get-VM -Name $VMName
+    foreach($vm in $VMName){
+        $CurrVM = Get-VM -Name $vm
 
-    if($CurrVM.State -eq 'Running'){
-        $CurrVM | Stop-VM
-    }
-
-    foreach($vhd in $CurrVM.HardDrives.Path){
-        if(Test-Path $vhd){
-            Remove-Item -Path $vhd -force
+        if($CurrVM.State -eq 'Running'){
+            $CurrVM | Stop-VM
         }
-    }
-    
-    Remove-VM -Name $VMName -Force
 
-    if(Test-Path $CurrVM.ConfigurationLocation){
-        Remove-Item -Path $CurrVM.ConfigurationLocation -Recurse -Force
-    }
+        $vhds = $CurrVM.HardDrives.Path
+        Remove-VM -Name $vm -Force
 
-    if(Test-Path $CurrVM.SnapshotFileLocation){
-        Remove-Item -Path $CurrVM.ConfigurationLocation -Recurse -Force
-    }
+        #pause to let automatic snapshots go away
+        start-sleep -Seconds 30
 
-    if(Test-Path $CurrVM.Path){
-        Remove-Item -Path $CurrVM.ConfigurationLocation -Recurse -Force
+        foreach($vhd in $vhds){
+            if(Test-Path $vhd){
+                Remove-Item -Path $vhd -force
+            }
+        }    
+        
+        if(Test-Path $CurrVM.ConfigurationLocation){
+            Remove-Item -Path $CurrVM.ConfigurationLocation -Recurse -Force
+        }
+
+        if(Test-Path $CurrVM.SnapshotFileLocation){
+            Remove-Item -Path $CurrVM.ConfigurationLocation -Recurse -Force
+        }
+
+        if(Test-Path $CurrVM.Path){
+            Remove-Item -Path $CurrVM.ConfigurationLocation -Recurse -Force
+        }
     }
 }
 

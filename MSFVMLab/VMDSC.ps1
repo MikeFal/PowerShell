@@ -23,9 +23,8 @@ configuration LabDC{
     Node $ComputerName{
         xIPAddress SetIP
         {
-            IPAddress      = '10.10.10.1'
+            IPAddress      = '10.10.10.1/24'
             InterfaceAlias = $NIC
-            PrefixLength     = 24
             AddressFamily  = 'IPV4'
  
         }
@@ -65,6 +64,12 @@ configuration LabDC{
             IncludeAllSubFeature = $true
         }
 
+        WindowsFeature RSATFAiloverClustering
+        { 
+            Ensure = 'Present'
+            Name = 'RSAT-Clustering'
+            IncludeAllSubFeature = $true
+        }
         xADDomain SetupDomain {
             DomainAdministratorCredential= $DomainCred
             DomainName= $DomainName
@@ -97,3 +102,6 @@ labdc -ComputerName 'localhost' -DomainName $DName -DomainCred $DCred -NIC $NICI
 
 Set-DscLocalConfigurationManager -Path .\LabDC -Verbose
 Start-DscConfiguration -Path .\LabDC -Verbose -Force -Wait
+
+#Set up Temp File Share. Should be replaced with DSC config
+New-SmbShare -name Temp -Path 'C:\Temp' -FullAccess Everyone

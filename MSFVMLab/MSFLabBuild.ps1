@@ -15,7 +15,7 @@ foreach($network in $LabConfig.Switches){
 #Set creds
 $LocalAdminCred = Get-Credential -Message 'Local Adminstrator Credential' -UserName 'localhost\administrator'
 $DomainCred = Get-Credential -Message 'Domain Credential' -UserName "$domain\administrator"
-$sqlsvccred = Get-Credential -Message 'Please enter the SQL Server Service credential' -UserName "$domain\sqlsvc"
+$sqlsvccred = Get-Credential -Message 'SQL Server Service credential' -UserName "$domain\sqlsvc"
 
 #create VMs
 foreach($Server in $Servers){
@@ -30,7 +30,7 @@ if(!(Get-VM -Name $Server.name -ErrorAction SilentlyContinue)){
     New-LabVM -VMName $Server.name `
         -VMPath 'C:\VMs\Machines' `
         -VHDPath 'C:\VMs\VHDs' `
-        -ISOs @('C:\VMs\ISOs\en_windows_server_2016_x64_dvd_9327751.ISO','C:\VMs\ISOs\en_sql_server_2016_developer_x64_dvd_8777069.iso') `
+        -ISOs @('C:\VMs\ISOs\en_windows_server_2016_x64_dvd_9718492.ISO','C:\VMs\ISOs\en_sql_server_2016_developer_with_service_pack_1_x64_dvd_9548071.iso') `
         -VMSource $img `
         -VMSwitches @('HostNetwork','LabNetwork') `
         -Verbose
@@ -46,7 +46,7 @@ foreach($Server in $Servers){
     Get-VM -Name $VMName | Get-VMIntegrationService | Where-Object {!($_.Enabled)} | Enable-VMIntegrationService -Verbose
 
     #load dependencies
-    Invoke-Command -VMName $VMName {Get-PackageProvider -Name NuGet -ForceBootstrap; Install-Module @('xComputerManagement','xActiveDirectory','xNetworking','xDHCPServer','xSqlServer','SqlServer') -Force} -Credential $LocalAdminCred
+    Invoke-Command -VMName $VMName {Get-PackageProvider -Name NuGet -ForceBootstrap; Install-Module @('xComputerManagement','xActiveDirectory','xNetworking','xDHCPServer','SqlServer') -Force} -Credential $LocalAdminCred
     
    if($Server.Type -eq 'Core'){
         #If Core, set default shell to Powershell
@@ -63,7 +63,6 @@ $dc = ($Servers | Where-Object {$_.Class -eq 'DomainController'}).Name
 
 #Load DSC Files
 Copy-VMFile -Name $dc -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\VMDSC.ps1' -DestinationPath 'C:\Temp\VMDSC.ps1' -CreateFullPath -FileSource Host -Force
-Copy-VMFile -Name $dc -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\VMDSC_DHCP.ps1' -DestinationPath 'C:\Temp\VMDSC_DHCP.ps1' -CreateFullPath -FileSource Host -Force
 Copy-VMFile -Name $dc -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\SQLDSC.ps1' -DestinationPath 'C:\Temp\SQLDSC.ps1' -CreateFullPath -FileSource Host -Force
 
 Invoke-Command -VMName $dc -ScriptBlock {. C:\Temp\VMDSC.ps1 -DName "$using:Domain.com" -DCred $using:DomainCred} -Credential $LocalAdminCred
@@ -72,42 +71,18 @@ Invoke-Command -VMName $dc -ScriptBlock {. C:\Temp\VMDSC.ps1 -DName "$using:Doma
 Stop-VM $dc
 Start-VM $dc
 
-#DHCP install
-Invoke-Command -VMName $dc -ScriptBlock {. C:\Temp\VMDSC_DHCP.ps1 -DName 'starfleet.com'} -Credential $DomainCred #$LocalAdminCred
-
-
 #Log on to DC and complete config
 
-foreach($Server in $($Servers | Where-Object {$_.Class -ne 'DomainController'})){ 
-#Set DNS
-Invoke-Command -VMName $Server.Name { ipconfig /release ; ipconfig /renew ; $idx = (Get-NetIPAddress | Where-Object {$_.IPAddress -like '10*'}).InterfaceIndex; Set-DnsClientServerAddress -InterfaceIndex $idx -ServerAddresses '10.10.10.1'} -Credential $LocalAdminCred
-    Invoke-Command -VMName $Server.Name -Credential $LocalAdminCred -ScriptBlock {Add-Computer -DomainName "$using:Domain.com" -Credential $using:DomainCred -Restart}
-}
 
 
-#Deploy SQL Servers
-#Create Service Account
 
-[ScriptBlock]$svccmd = {
-param([PSCredential]$sqlsvc)
-New-ADUser -Name $sqlsvc.GetNetworkCredential().UserName -AccountPassword $sqlsvc.Password -PasswordNeverExpires $true -CannotChangePassword $true
-Enable-ADAccount -Identity $sqlsvc.GetNetworkCredential().UserName 
 
-New-ADUser -Name 'mike.fal' -AccountPassword (ConvertTo-SecureString 'P@ssw0rd!' -AsPlainText -Force) -ChangePasswordAtLogon $true
-Enable-ADAccount -Identity 'mike.fal'
 
-Add-ADGroupMember 'Domain Admins' -Members @($sqlsvc.GetNetworkCredential().UserName,'mike.fal')
-}
 
-Invoke-Command -VMName $dc -ScriptBlock $svccmd -ArgumentList $sqlsvccred -Credential $DomainCred
-
-$sqlnodes = ($Servers | Where-Object {$_.Class -eq 'SQLServer'}).Name
-$cmd = [ScriptBlock]::Create("& E:\setup.exe /CONFIGURATIONFILE='C:\TEMP\2016install.ini' /SQLSVCACCOUNT='STARFLEET\$($sqlsvccred.GetNetworkCredential().UserName)' /SQLSVCPASSWORD='$($sqlsvccred.GetNetworkCredential().Password)' /AGTSVCACCOUNT='STARFLEET\$($sqlsvccred.GetNetworkCredential().UserName)' /AGTSVCPASSWORD='$($sqlsvccred.GetNetworkCredential().Password)' /SAPWD='$($sqlsvccred.GetNetworkCredential().Password)' /IACCEPTSQLSERVERLICENSETERMS")
-Invoke-Command -VMName $dc -ScriptBlock {. C:\Temp\SQLDSC.ps1 -SqlNodes $using:sqlnodes} -Credential $DomainCred 
 
 foreach($node in $sqlnodes){
-Copy-VMFile -Name $node -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\2016install.ini' -DestinationPath 'C:\TEMP\2016install.ini' -CreateFullPath -FileSource Host -Force
-Invoke-Command -VMName $node -ScriptBlock $cmd -Credential $DomainCred
+    Copy-VMFile -Name $node -SourcePath 'C:\git-repositories\PowerShell\MSFVMLab\2016install.ini' -DestinationPath 'C:\TEMP\2016install.ini' -CreateFullPath -FileSource Host -Force
+    Invoke-Command -VMName $node -ScriptBlock $cmd -Credential $DomainCred
 }
 
 

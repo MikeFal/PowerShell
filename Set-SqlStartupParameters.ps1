@@ -10,7 +10,14 @@ function Set-SQLStartupParameters{
     #Loop through and change instances
     foreach($i in $Instance){
         #Parse host and instance names
-        $HostName = ($i.Split('\'))[0]
+        if (($i.Split('\').count) -gt 1)
+            {
+            $HostName = ($i.Split('\'))[0]
+            }
+        else
+            {
+            $HostName = $i
+            }
         $InstanceName = ($i.Split('\'))[1]
 
         #Get service account names, set service account for change
